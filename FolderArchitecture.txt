@@ -1,0 +1,6 @@
+Larian-Breakout/
+│
+├── Assets/         (Aquí posarem la font .ttf, algun so .wav i alguna textura)
+├── Core/           (El teu "micro-motor": Application, Window, Renderer, Input)
+├── Game/           (Els scripts del joc: GameManager, Ball, Paddle, Layers)
+└── vendor/         (Les llibreries aprovades)
