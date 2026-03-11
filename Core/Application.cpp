@@ -26,7 +26,7 @@ Application::Application(const std::string& name)
 
 Application::~Application()
 {
-    m_LayerStack.Clear(); // O el mètode que tinguis per netejar-ho
+    m_LayerStack.Clear();
 
     Renderer::Shutdown();
     // AudioEngine::Shutdown();

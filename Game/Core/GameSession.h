@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Timestep.h"
-#include "Input/Input.h"
 #include "Renderer/OrthographicCamera.h"
 
 #include "Entities/Player.h"
@@ -11,6 +10,7 @@
 
 #include "LevelFactory.h"
 #include "PhysicsService.h"
+#include "PlayerController.h"
 
 enum class GameState {
     MainMenu,
@@ -31,6 +31,8 @@ private:
     Ball m_Ball;
     Level m_Level;
 
+    bool m_BallInPlay = false;
+
 public:
     GameSession()
         : m_Camera(-1.6f, 1.6f, -0.9f, 0.9f),
@@ -39,31 +41,69 @@ public:
 
     void Init() {
         m_CurrentState = GameState::Playing;
-
+        m_Player = Player();    
         m_Paddle = Paddle({ 0.0f, -0.8f }, { 0.6f, 0.1f }, 2.0f);
         m_Ball = Ball({ 0.0f, -0.7f }, 0.05f);
-        m_Ball.Launch({ 1.0f, 1.5f });
 
-        LevelFactory::GenerateBasicLevel(m_Level);
+        m_Level.SetGrid(5, 10);
+        LevelFactory::SetUpLevel(m_Level);
+
+        ResetBall();
     }
 
     void Update(Timestep ts) {
         if (m_CurrentState != GameState::Playing) return;
 
-        if (Input::IsKeyPressed(KeyCode::A) || Input::IsKeyPressed(KeyCode::Left)) {
-            m_Paddle.MoveLeft(ts.GetSeconds());
+        if (!m_BallInPlay) {
+            // Ball sticked to Paddle
+            m_Ball.SetPosition({
+                m_Paddle.GetPosition().x,
+                m_Paddle.GetPosition().y + m_Paddle.GetSize().y / 2.0f + m_Ball.GetSize()
+                });
         }
-        else if (Input::IsKeyPressed(KeyCode::D) || Input::IsKeyPressed(KeyCode::Right)) {
-            m_Paddle.MoveRight(ts.GetSeconds());
-        }
+        else {
+            // Ball physics
+            PhysicsService::Update(m_Paddle, m_Ball, m_Level, m_Player, ts.GetSeconds()); //physiscs loop/system
+            // mirar: cridar physicssystem que sapiga gestionar les fisiques de les diferentes enitats fisiques
+            // ha de dir a tothom que tingui fisiques calculeuvos
+            // 
+            // un servei no te update, el crides quan el necesites.
 
-        PhysicsService::Update(m_Paddle, m_Ball, m_Level, m_Player, ts.GetSeconds());
+            // Lives
+            if (m_Ball.GetPosition().y < m_Level.GetBottomLimit()) {
+                m_Player.LoseLife();
+
+                if (m_Player.IsDead()) {
+                    m_CurrentState = GameState::GameOver;
+                    std::cout << "GAME OVER! Puntuació final: " << m_Player.Score << "\n";
+                }
+                else {
+                    ResetBall();
+                }
+            }
+        }
+    }
+
+    void ResetBall() {
+        m_BallInPlay = false;
+        m_Paddle.SetPosition({ 0.0f, -0.8f });
+        m_Ball.Launch({ 0.0f, 0.0f });
+    }
+
+    void FireBall() {
+        if (!m_BallInPlay && m_CurrentState == GameState::Playing) {
+            m_BallInPlay = true;
+            m_Ball.Launch({ 1.0f, 1.5f });
+        }
     }
 
     const OrthographicCamera& GetCamera() const { return m_Camera; }
     const Paddle& GetPaddle() const { return m_Paddle; }
+    Paddle& GetPaddleMutable() { return m_Paddle; }
     const Ball& GetBall() const { return m_Ball; }
     const Level& GetLevel() const { return m_Level; }
+
+    GameState GetGameState() const { return m_CurrentState; }
 
 private:
     bool CheckAABB(glm::vec2 posA, glm::vec2 sizeA, glm::vec2 posB, glm::vec2 sizeB) {
