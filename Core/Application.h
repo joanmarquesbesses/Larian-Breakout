@@ -2,7 +2,6 @@
 
 #include <string>
 #include <memory>
-#include <vector>
 
 #include "Window.h"
 #include "LayerStack.h"

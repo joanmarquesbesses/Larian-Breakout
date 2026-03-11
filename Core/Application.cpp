@@ -2,7 +2,7 @@
 #include <iostream>
 #include <GLFW/glfw3.h>
 
-// #include "Renderer.h"
+#include "Renderer/Renderer.h"
 // #include "AudioEngine.h"
 
 Application* Application::s_Instance = nullptr;
@@ -20,19 +20,15 @@ Application::Application(const std::string& name)
     m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 
     // Aquí aniran els Inits dels teus sistemes (quan els portis)
-    // Renderer::Init();
+    Renderer::Init();
     // AudioEngine::Init();
 }
 
 Application::~Application()
 {
-    for (Layer* layer : m_LayerStack) {
-        layer->OnDetach();
-        delete layer; // Bona pràctica si els has fet amb 'new'
-    }
     m_LayerStack.Clear(); // O el mètode que tinguis per netejar-ho
 
-    // Renderer::Shutdown();
+    Renderer::Shutdown();
     // AudioEngine::Shutdown();
 }
 
@@ -81,7 +77,7 @@ bool Application::OnWindowResize(WindowResizeEvent& e)
     }
 
     m_Minimized = false;
-    // Renderer::OnWindowResize(e.GetWidth(), e.GetHeight());
+    Renderer::SetViewport(0, 0, e.GetWidth(), e.GetHeight());
     return false;
 }
 
