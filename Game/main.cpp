@@ -1,48 +1,161 @@
-#include <iostream>
 #include <vector>
-#include <glm/glm.hpp> // Si això no dóna error subratllat en vermell, Premake ha triomfat!
+#include <glm/glm.hpp>
+#include <optional>
+#include <iostream>
 
-// 1. EL DOMINI (Només Dades)
-struct Ball {
-    glm::vec2 Position = { 0.0f, 0.0f };
-    glm::vec2 Velocity = { 0.0f, 0.0f };
-    float Radius = 0.5f;
-};
+#include "Application.h"
 
-struct Level {
-    float BottomLimit = -10.0f;
-};
+class Ball {
+private:
+    glm::vec2 m_Position;
+    glm::vec2 m_Velocity;
+    float m_Radius;
 
-struct GameSession {
-    int Score = 0;
-};
-
-// 2. ELS SERVEIS (Només Lògica)
-class MovementService {
 public:
-    void MoveBall(Ball& ball, float deltaTime) {
-        ball.Position += ball.Velocity * deltaTime;
+    Ball(glm::vec2 startPos, float radius) 
+        : m_Position(startPos), m_Velocity(0.0f, 0.0f), m_Radius(radius) {}
+
+    void Move(float deltaTime) {
+        m_Position += m_Velocity * deltaTime;
+    }
+
+    void Launch(glm::vec2 initialVelocity) {
+        m_Velocity = initialVelocity;
     }
 };
 
-// 3. EL BANC DE PROVES
-int main() {
-    std::cout << "--- Iniciant Arkanoid (DDD Architecture) ---\n";
+enum class PowerUpType {
+    None = 0,
+    ExtraLife,
+    ExpandPaddle,
+    MultiBall
+};
 
-    GameSession session;
-    Level level;
-    Ball ball;
+class Brick {
+private:
+    glm::vec2 m_Position;
+    glm::vec2 m_Size;
+    int m_Health;
+    std::optional<PowerUpType> m_Reward;
 
-    // La bola es mou cap amunt
-    ball.Velocity = { 0.0f, 2.0f };
+public:
+    Brick(glm::vec2 pos, glm::vec2 size, int health, PowerUpType powerUp = PowerUpType::None)
+        : m_Position(pos), m_Size(size), m_Health(health), m_Reward(powerUp) {}
 
-    MovementService movement;
-    float dummyDeltaTime = 0.5f; // Mig segon per frame (per veure-ho clar)
-
-    for (int i = 0; i < 5; i++) {
-        movement.MoveBall(ball, dummyDeltaTime);
-        std::cout << "Frame " << i << " | Posicio Bola Y: " << ball.Position.y << "\n";
+    void TakeDamage() {
+        if (m_Health > 0) m_Health--;
     }
 
+    bool IsDestroyed() const { return m_Health <= 0; }
+
+    std::optional<PowerUpType> TryExtractPowerUp() {
+        auto reward = m_Reward;
+        m_Reward = std::nullopt;
+        return reward;
+    }
+};
+
+class Level {
+private:
+    std::vector<Brick> m_Bricks;
+    float m_LeftLimit;   
+    float m_RightLimit;  
+    float m_TopLimit;    
+    float m_BottomLimit;
+
+public:
+    Level(float left, float right, float top, float bottom)
+        : m_LeftLimit(left), m_RightLimit(right), m_TopLimit(top), m_BottomLimit(bottom) {}
+
+    void AddBrick(const Brick& brick) {
+        m_Bricks.push_back(brick);
+    }
+
+    std::vector<Brick>& GetBricks() { return m_Bricks; }
+    const std::vector<Brick>& GetBricks() const { return m_Bricks; }
+
+    float GetLeftLimit() const { return m_LeftLimit; }
+    float GetRightLimit() const { return m_RightLimit; }
+    float GetTopLimit() const { return m_TopLimit; }
+    float GetBottomLimit() const { return m_BottomLimit; }
+};
+
+class Paddle {
+private:
+    glm::vec2 m_Position;
+    glm::vec2 m_Size;
+    float m_Speed;
+
+public:
+    Paddle(glm::vec2 startPos, glm::vec2 size, float speed)
+        : m_Position(startPos), m_Size(size), m_Speed(speed) {
+    }
+
+    void MoveLeft(float dt) { m_Position.x -= m_Speed * dt; }
+    void MoveRight(float dt) { m_Position.x += m_Speed * dt; }
+};
+
+enum class GameState {
+    MainMenu,
+    Playing,
+    Paused,
+    GameOver,
+    Victory
+};
+
+class GameSession {
+private:
+    int m_Score = 0;
+    int m_Lives = 3;
+    GameState m_CurrentState = GameState::MainMenu;
+
+public:
+    void AddScore(int score) {
+        m_Score += score;
+    }
+
+    void LoseLife() {
+        --m_Lives;
+    }
+
+    void ChangeGameState(GameState gameState) {
+        m_CurrentState = m_CurrentState;
+    }
+
+    GameState GetGameState() const {
+        return m_CurrentState;
+    }
+};
+
+class ArkanoidApp : public Application
+{
+public:
+    ArkanoidApp() : Application("Larian Arkanoid - Prova Tecnica")
+    {
+        // Aquí és on més endavant farem:
+        // PushLayer(new GameLayer());
+        std::cout << "[ArkanoidApp] Joc inicialitzat correctament.\n";
+    }
+
+    ~ArkanoidApp()
+    {
+        std::cout << "[ArkanoidApp] Joc tancat.\n";
+    }
+};
+
+int main() {
+
+    std::cout << "--- Iniciant Motor ---\n";
+
+    // Instanciem l'aplicació
+    ArkanoidApp* app = new ArkanoidApp();
+
+    // Executem el bucle infinit (aquí dins hi ha el Update i el Render)
+    app->Run();
+
+    // Neteja de memòria un cop tanquem la finestra
+    delete app;
+
+    std::cout << "--- Sortida Neta ---\n";
     return 0;
 }
