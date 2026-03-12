@@ -2,6 +2,7 @@
 #include <iostream>
 #include <GLFW/glfw3.h>
 
+#include "Assets/ResourceManager.h"
 #include "Renderer/Renderer.h"
 // #include "AudioEngine.h"
 
@@ -28,8 +29,10 @@ Application::~Application()
 {
     m_LayerStack.Clear();
 
+    m_Window.reset();
     Renderer::Shutdown();
     // AudioEngine::Shutdown();
+    ResourceManager::Clear();
 }
 
 void Application::PushLayer(Layer* layer)

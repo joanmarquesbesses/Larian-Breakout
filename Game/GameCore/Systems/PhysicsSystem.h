@@ -71,7 +71,7 @@ public:
 
             if (ball.GetPosition().y < session.GetCurrentLevel().GetBottomLimit()) {
                 session.GetPlayer().LoseLife();
-                session.ToggleIsBallInPlay();
+                session.SetIsBallInPlay(false);
             }
         }
     }

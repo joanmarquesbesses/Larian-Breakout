@@ -25,7 +25,11 @@ project "Breakout"
         "Engine/**.h",
         "Engine/**.cpp",
         "Game/**.h",
-        "Game/**.cpp"
+        "Game/**.cpp",
+        "vendor/stb_image/**.h",
+        "vendor/stb_image/**.cpp",
+        "vendor/stb_truetype/**.h",
+        "vendor/stb_truetype/**.cpp"
     }
 
     includedirs {
@@ -36,6 +40,7 @@ project "Breakout"
         "vendor/Glad/include",
         "vendor/glm",
         "vendor/stb_image", 
+        "vendor/stb_truetype",
         "vendor/miniaudio"
     }
 

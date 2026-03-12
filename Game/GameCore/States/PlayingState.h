@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EngineCore/Timestep.h"
+#include "Assets/ResourceManager.h"
 #include "Renderer/Renderer.h"
 
 #include "IGameState.h"
@@ -8,6 +9,9 @@
 #include "GameCore/Systems/PaddleSystem.h"
 #include "GameCore/Systems/PhysicsSystem.h"
 #include "GameCore/Services/LevelSetup.h"
+
+static std::shared_ptr<Texture2D> testTexture;
+static std::shared_ptr<Font> m_Font;
 
 class PlayingState : public IGameState {
 private:
@@ -30,6 +34,9 @@ public:
         m_Session->GetBalls().clear();
         m_Session->GetBalls().push_back(Ball({0.0f, -0.7f}, 0.1f));
         m_Session->SetIsBallInPlay(false);
+
+        testTexture = ResourceManager::Get<Texture2D>("check.png");
+        m_Font = ResourceManager::Get<Font>("arial.ttf");
     }
 
     void OnUpdate(Timestep ts) override {
@@ -69,6 +76,9 @@ public:
                 Renderer::DrawQuad(brick.GetPosition(), brick.GetSize(), brick.GetColor());
             }
         }
+
+        Renderer::DrawQuad({ 0.0f, 0.0f }, { 0.5f, 0.5f }, testTexture);
+        Renderer::DrawString("SCORE: " + std::to_string(m_Session->GetPlayer().Score), { -1.5f, 0.8f }, 0.002f, { 1.0f, 1.0f, 0.0f, 1.0f }, m_Font);
 
         Renderer::EndScene();
     }
