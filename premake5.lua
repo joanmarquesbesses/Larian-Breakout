@@ -7,8 +7,10 @@ workspace "LarianBreakout"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
-include "vendor/GLFW"
-include "vendor/Glad"
+group "Dependencies"
+	include "vendor/GLFW"
+    include "vendor/Glad"
+group ""
 
 project "Breakout"
     kind "ConsoleApp" 
@@ -20,14 +22,14 @@ project "Breakout"
     objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
     files {
-        "Core/**.h",
-        "Core/**.cpp",
+        "Engine/**.h",
+        "Engine/**.cpp",
         "Game/**.h",
         "Game/**.cpp"
     }
 
     includedirs {
-        "Core",
+        "Engine",
         "Game",
         "vendor/spdlog/include",
         "vendor/GLFW/include",

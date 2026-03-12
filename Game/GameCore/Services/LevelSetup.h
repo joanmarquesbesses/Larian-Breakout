@@ -1,7 +1,7 @@
 #pragma once
 #include "Entities/Level.h"
 
-class LevelFactory { //TODO: buscar un millor nom. ex: levelinitializer 
+class LevelSetup { //TODO: buscar un millor nom. ex: levelinitializer 
     //TODO: ser mes coherent amb els noms
 public:
     static void SetUpLevel(Level& level,float spaceX = 0.02f, float spaceY = 0.02f) {

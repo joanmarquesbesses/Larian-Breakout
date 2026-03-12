@@ -3,10 +3,10 @@
 #include <string>
 #include <memory>
 
-#include "Window.h"
-#include "LayerStack.h"
+#include "EngineCore/Window.h"
+#include "EngineCore/LayerStack.h"
 #include "Events/ApplicationEvent.h"
-#include "Timestep.h"
+#include "EngineCore/Timestep.h"
 
 class Application
 {

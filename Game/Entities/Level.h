@@ -23,7 +23,6 @@ public:
     }
 
     std::vector<Brick>& GetBricks() { return m_Bricks; }
-    const std::vector<Brick>& GetBricks() const { return m_Bricks; }
 
     float GetLeftLimit() const { return m_LeftLimit; }
     float GetRightLimit() const { return m_RightLimit; }

@@ -1,12 +1,18 @@
-#include "Layer.h"
-#include "Renderer/Renderer.h"
-#include "Core/GameSession.h"
-#include "Core//PlayerController.h"
+#include "EngineCore/Layer.h"
+#include "GameCore/GameSession.h"
+#include "GameCore/Systems/PaddleSystem.h"
+#include "GameCore/Systems/PhysicsSystem.h"
+#include "GameCore/States/PlayingState.h"
 
 class GameLayer : public Layer
 {
 private:
     GameSession m_Session;
+
+    std::unique_ptr<PaddleSystem> m_PaddleSystem;
+    std::unique_ptr<PhysicsSystem> m_PhysicsSystem;
+
+    std::unique_ptr<IGameState> m_CurrentState;
 
 public:
 
@@ -14,49 +20,21 @@ public:
 
     void OnAttach() override
     {
-        m_Session.Init();
+        m_PaddleSystem = std::make_unique<PaddleSystem>();
+        m_PhysicsSystem = std::make_unique<PhysicsSystem>();
+
+        // 2. Creem l'estat inicial i li injectem les dependències
+        m_CurrentState = std::make_unique<PlayingState>(&m_Session, m_PaddleSystem.get(), m_PhysicsSystem.get());
+
+        // 3. Arranquem la màquina!
+        m_CurrentState->OnEnter();
     }
 
     void OnUpdate(Timestep ts) override
     {
-        //input
-        if (m_Session.GetGameState() == GameState::Playing)
-        {
-            if (auto action = PlayerController::GetPaddleAction()) {
-                if (*action == PlayerAction::MoveLeft) {
-                    m_Session.GetPaddleMutable().MoveLeft(ts.GetSeconds()); // mirar mutable
-                }
-                else if (*action == PlayerAction::MoveRight) {
-                    m_Session.GetPaddleMutable().MoveRight(ts.GetSeconds());
-                }
-            }
-
-            if (PlayerController::IsActionPressed(PlayerAction::Fire)) {
-                m_Session.FireBall();
-            }
+        if (m_CurrentState) {
+            m_CurrentState->OnUpdate(ts);
+            m_CurrentState->OnRender();
         }
-
-        //wolrd logic
-        m_Session.Update(ts);
-
-        //render
-        Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
-        Renderer::Clear();
-
-        Renderer::BeginScene(m_Session.GetCamera().GetViewProjectionMatrix());
-
-        auto& paddle = m_Session.GetPaddle();
-        Renderer::DrawQuad(paddle.GetPosition(), paddle.GetSize(), { 0.2f, 0.3f, 0.8f, 1.0f });
-
-        auto& ball = m_Session.GetBall();
-        Renderer::DrawQuad(ball.GetPosition(), { ball.GetSize() * 2.0f, ball.GetSize() * 2.0f }, { 1.0f, 1.0f, 1.0f, 1.0f });
-
-        for (const auto& brick : m_Session.GetLevel().GetBricks()) {
-            if (!brick.IsDestroyed()) {
-                Renderer::DrawQuad(brick.GetPosition(), brick.GetSize(), brick.GetColor());
-            }
-        }
-
-        Renderer::EndScene();
     }
 };
