@@ -6,7 +6,7 @@
 
 class Font {
 public:
-    Font(const std::string& path, float size = 64.0f);
+    Font(const std::string& path, float size = 120.0f);
 
     std::shared_ptr<Texture2D> GetAtlas() const { return m_Atlas; }
     const stbtt_bakedchar* GetBakedChars() const { return m_CData; }

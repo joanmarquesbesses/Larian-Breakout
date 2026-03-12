@@ -15,7 +15,7 @@ Font::Font(const std::string& path, float size) {
     std::vector<unsigned char> ttf_buffer(ttf_size);
     if (!file.read((char*)ttf_buffer.data(), ttf_size)) return;
 
-    const int atlasSize = 512;
+    const int atlasSize = 1024;
     std::vector<unsigned char> temp_bitmap(atlasSize * atlasSize);
 
     stbtt_BakeFontBitmap(ttf_buffer.data(), 0, size, temp_bitmap.data(), atlasSize, atlasSize, 32, 96, m_CData);

@@ -1,8 +1,14 @@
 #include "EngineCore/Layer.h"
+
 #include "GameCore/GameSession.h"
+
 #include "GameCore/Systems/PaddleSystem.h"
 #include "GameCore/Systems/PhysicsSystem.h"
+
+#include "GameCore/States/TitleScreenState.h"
+#include "GameCore/States/MainMenuState.h"
 #include "GameCore/States/PlayingState.h"
+#include "GameCore/States/GameOverState.h"
 
 class GameLayer : public Layer
 {
@@ -23,10 +29,34 @@ public:
         m_PaddleSystem = std::make_unique<PaddleSystem>();
         m_PhysicsSystem = std::make_unique<PhysicsSystem>();
 
-        // 2. Creem l'estat inicial i li injectem les dependències
-        m_CurrentState = std::make_unique<PlayingState>(&m_Session, m_PaddleSystem.get(), m_PhysicsSystem.get());
+        ChangeState(GameStateType::TitleScreen);
+    }
 
-        // 3. Arranquem la màquina!
+    void ChangeState(GameStateType newState) {
+
+        if (m_CurrentState) {
+            m_CurrentState->OnExit();
+        }
+
+        switch (newState) {
+        case GameStateType::TitleScreen:
+            m_CurrentState = std::make_unique<TitleScreenState>();
+            break;
+        case GameStateType::MainMenu:
+            m_CurrentState = std::make_unique<MainMenuState>();
+            break;
+        case GameStateType::Playing:
+            m_CurrentState = std::make_unique<PlayingState>(&m_Session, m_PaddleSystem.get(), m_PhysicsSystem.get());
+            break;
+        case GameStateType::GameOver:
+            m_CurrentState = std::make_unique<GameOverState>(&m_Session);
+            break;
+        }
+
+        m_CurrentState->SetStateChangeCallback([this](GameStateType state) {
+            this->ChangeState(state);
+            });
+
         m_CurrentState->OnEnter();
     }
 

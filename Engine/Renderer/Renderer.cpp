@@ -325,7 +325,7 @@ void Renderer::DrawString(const std::string& text, const glm::vec2& position, fl
 
         if (c >= 32 && c < 128) {
             stbtt_aligned_quad q;
-            stbtt_GetBakedQuad(font->GetBakedChars(), 512, 512, c - 32, &xOffset, &yOffset, &q, 1);
+            stbtt_GetBakedQuad(font->GetBakedChars(), font->GetAtlas()->GetWidth(), font->GetAtlas()->GetHeight(), c - 32, &xOffset, &yOffset, &q, 1);
 
             float w = (q.x1 - q.x0) * scale;
             float h = (q.y1 - q.y0) * scale;
@@ -345,4 +345,19 @@ void Renderer::DrawString(const std::string& text, const glm::vec2& position, fl
             DrawQuad(transform, font->GetAtlas(), charTexCoords, color);
         }
     }
+}
+
+float Renderer::GetTextWidth(const std::string& text, float scale, const std::shared_ptr<Font>& font)
+{
+    if (!font || !font->GetAtlas()) return 0.0f;
+    float xOffset = 0.0f;
+    float yOffset = 0.0f;
+
+    for (char c : text) {
+        if (c >= 32 && c < 128) {
+            stbtt_aligned_quad q;
+            stbtt_GetBakedQuad(font->GetBakedChars(), font->GetAtlas()->GetWidth(), font->GetAtlas()->GetHeight(), c - 32, &xOffset, &yOffset, &q, 1);
+        }
+    }
+    return xOffset * scale;
 }

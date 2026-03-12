@@ -36,6 +36,9 @@ public:
     static void DrawQuad(const glm::mat4& transform, const std::shared_ptr<Texture2D>& texture, const glm::vec2* texCoords, const glm::vec4& tintColor = glm::vec4(1.0f));
     static void DrawString(const std::string& text, const glm::vec2& position, float scale, const glm::vec4& color, const std::shared_ptr<Font>& font);
 
+    // Text Util
+    static float GetTextWidth(const std::string& text, float scale, const std::shared_ptr<Font>& font);
+
 private:
     static void StartBatch();
     static void NextBatch();
