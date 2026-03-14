@@ -104,6 +104,9 @@ void Application::Run()
             for (Layer* layer : m_LayerStack) {
                 layer->OnUpdate(timestep);
             }
+            for (Layer* layer : m_LayerStack) {
+                layer->OnRender();
+            }
         }
 
         m_Window->OnUpdate();

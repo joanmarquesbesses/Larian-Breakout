@@ -17,6 +17,7 @@ public:
         if (m_Score > m_MaxScore) m_MaxScore = m_Score;
     }
 
+    int GetLives() { return m_Lives; }
     void LoseLife() { if (m_Lives > 0) m_Lives--; }
     bool IsDead() const { return m_Lives <= 0; }
 

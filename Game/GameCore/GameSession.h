@@ -21,8 +21,9 @@ private:
     OrthographicCamera m_Camera;
     Player m_Player;
     Paddle m_Paddle;
-    Level m_CurrentLevel;
     std::vector<Ball> m_Balls;
+    Level m_CurrentLevel;
+    int m_CurrentLevelIndex = 0;
     bool m_IsBallInPlay = false;
 
 public:
@@ -36,8 +37,9 @@ public:
     Paddle& GetPaddle() { return m_Paddle; }
     std::vector<Ball>& GetBalls() { return m_Balls; }
     Level& GetCurrentLevel() { return m_CurrentLevel; }
+    int GetCurrentLevelIndex() const { return m_CurrentLevelIndex; }
+    void SetCurrentLevelIndex(int index) { m_CurrentLevelIndex = index; }
 
     void SetIsBallInPlay(bool isBallInPlay) { m_IsBallInPlay = isBallInPlay; }
-    void ToggleIsBallInPlay() { m_IsBallInPlay != m_IsBallInPlay; }
     bool GetIsBallInPlay() { return m_IsBallInPlay; }
 };

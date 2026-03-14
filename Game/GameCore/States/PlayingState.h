@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "EngineCore/Timestep.h"
 #include "Assets/ResourceManager.h"
 #include "Renderer/Renderer.h"
@@ -18,11 +20,17 @@ private:
 
     bool m_IsPaused = false;
 
-    int m_PauseSelectedIndex = 0;
     std::shared_ptr<Font> m_Font;
-    std::vector<std::string> m_PauseOptions = { "RESUME", "MAIN MENU" };
+    std::unique_ptr<TextMenu> m_PauseMenu;
 
-    float m_Time;
+    float m_Time = 0.0f;
+
+    // Game feel
+    float m_TimeScale = 1.0f;      
+    float m_HitPauseTimer = 0.0f;  
+    float m_ShakeTimer = 0.0f;     
+    float m_ShakeIntensity = 0.05f;
+    float m_ZoomTimer = 0.0f;
 
 public:
     // Injecció de dependències des del Bootstrap!
@@ -33,16 +41,17 @@ public:
     void OnEnter() override {
         m_Font = ResourceManager::Get<Font>("arial.ttf");
 
-        m_Session->GetCurrentLevel().SetGrid(5, 10);
-        LevelSetup::SetUpLevel(m_Session->GetCurrentLevel());
-
-        m_Session->GetPaddle().SetPosition({0.0f, -0.8f});
-        m_Session->GetBalls().clear();
-        m_Session->GetBalls().push_back(Ball({0.0f, -0.7f}, 0.1f));
-        m_Session->SetIsBallInPlay(false);
+        m_PauseMenu = std::make_unique<TextMenu>(
+            std::vector<std::string>{"RESUME", "MAIN MENU"},
+            std::vector<float>{ 0.0f, -0.3f },
+            m_Font
+        );
 
         m_Session->GetPlayer().ResetLives();
         m_Session->GetPlayer().ResetScore();
+        m_Session->SetCurrentLevelIndex(1);
+
+        PrepareLevel();
     }
 
     void OnUpdate(Timestep ts) override {
@@ -50,52 +59,100 @@ public:
         // Activate/Desactivate Pause
         if (PlayerController::ConsumeIfPressed(PlayerAction::Pause)) {
             m_IsPaused = !m_IsPaused;
-            m_PauseSelectedIndex = 0; // Reiniciem la selecció al posar pausa
+            if (m_IsPaused) m_PauseMenu->SetSelectedIndex(0);
         }
 
         if (m_IsPaused) {
-            m_Time += ts;
+            auto result = m_PauseMenu->OnUpdate(m_Session->GetCamera(), ts.GetSeconds());
 
-            if (PlayerController::ConsumeIfPressed(PlayerAction::Down)) {
-                m_PauseSelectedIndex++;
-                if (m_PauseSelectedIndex >= m_PauseOptions.size()) m_PauseSelectedIndex = 0;
-            }
-            if (PlayerController::ConsumeIfPressed(PlayerAction::Up)) {
-                m_PauseSelectedIndex--;
-                if (m_PauseSelectedIndex < 0) m_PauseSelectedIndex = m_PauseOptions.size() - 1;
-            }
-
-            if (PlayerController::ConsumeIfPressed(PlayerAction::Accept) || PlayerController::ConsumeIfPressed(PlayerAction::Fire)) {
-                if (m_PauseSelectedIndex == 0) {
+            if (result.has_value()) {
+                if (result.value() == 0) {
                     m_IsPaused = false;
                 }
-                else if (m_PauseSelectedIndex == 1) {
+                else if (result.value() == 1) {
                     if (m_RequestStateChange) m_RequestStateChange(GameStateType::MainMenu);
                 }
             }
-
             return;
         }
 
-        // Paddle System
-        m_PaddleSystem->Update(*m_Session, ts.GetSeconds());
+        bool isDead = m_Session->GetPlayer().IsDead();
+        m_TimeScale = isDead ? 0.2f : 1.0f;
 
-        if (!m_Session->GetIsBallInPlay()) {
-            // Stick Ball to Paddle
-            if (!m_Session->GetBalls().empty()) {
-                m_Session->GetBalls()[0].SetPosition({ m_Session->GetPaddle().GetPosition().x, m_Session->GetPaddle().GetPosition().y + 0.15f});
-            }
-            if (PlayerController::IsActionPressed(PlayerAction::Fire)) {
-                m_Session->SetIsBallInPlay(true);
-                if (!m_Session->GetBalls().empty()) m_Session->GetBalls()[0].Launch({ 1.0f, 1.5f });
+        float realDt = ts.GetSeconds();
+        float gameDt = realDt * m_TimeScale;
+
+        // Check camera effects timers
+        if (m_HitPauseTimer > 0.0f) {
+            m_HitPauseTimer -= realDt;
+            gameDt = 0.0f;
+        }
+        if (m_ShakeTimer > 0.0f) {
+            m_ShakeTimer -= realDt;
+        }
+        if (m_ZoomTimer > 0.0f) {
+            m_ZoomTimer -= realDt;
+        }
+
+        // Game Over
+        if (isDead) {
+            if (m_RequestStateChange) m_RequestStateChange(GameStateType::GameOver);
+            if (!m_Session->GetBalls().empty()) m_Session->GetBalls()[0].Move(gameDt);
+        }
+
+        // Next level
+        bool levelComplete = true;
+        for (const auto& brick : m_Session->GetCurrentLevel().GetBricks()) {
+            if (!brick.IsDestroyed()) {
+                levelComplete = false;
+                break;
             }
         }
-        else {
-            m_PhysicsSystem->Update(*m_Session, ts.GetSeconds());
-            if (m_Session->GetPlayer().IsDead()) {
-                if (m_RequestStateChange) {
-                    m_RequestStateChange(GameStateType::GameOver);
+
+        // Send function to GameLayer to be executed when fade in is finished
+        if (levelComplete && !isDead) {
+            if (m_RequestTransition) {
+                m_RequestTransition(
+                    [this]() {
+                        int nextLevel = m_Session->GetCurrentLevelIndex() + 1;
+                        m_Session->SetCurrentLevelIndex(nextLevel);
+                        PrepareLevel(); 
+                    }
+                );
+            }
+            return;
+        }
+
+        // Input
+        if (!isDead && !levelComplete) {
+            m_PaddleSystem->Update(*m_Session, gameDt);
+
+            if (!m_Session->GetIsBallInPlay()) {
+                if (!m_Session->GetBalls().empty()) {
+                    m_Session->GetBalls()[0].SetPosition({ m_Session->GetPaddle().GetPosition().x, m_Session->GetPaddle().GetPosition().y + 0.15f });
                 }
+                if (PlayerController::IsActionPressed(PlayerAction::Fire)) {
+                    m_Session->SetIsBallInPlay(true);
+                    if (!m_Session->GetBalls().empty()) m_Session->GetBalls()[0].Launch({ 1.0f, 1.5f });
+                }
+            }
+        }
+
+        int previousScore = m_Session->GetPlayer().GetScore();
+        int previousLives = m_Session->GetPlayer().GetLives();
+
+        // Ball Phyics
+        if (m_Session->GetIsBallInPlay()) {
+            m_PhysicsSystem->Update(*m_Session, gameDt);
+
+            if (m_Session->GetPlayer().GetScore() > previousScore) {
+                m_ZoomTimer = 0.15f;
+            }
+
+            if (m_Session->GetPlayer().GetLives() < previousLives) {
+                m_HitPauseTimer = 0.1f; 
+                m_ShakeTimer = 0.3f;     
+                m_ShakeIntensity = 0.04f;
             }
         }
     }
@@ -103,7 +160,23 @@ public:
     void OnRender() override {
         Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
         Renderer::Clear();
-        Renderer::BeginScene(m_Session->GetCamera().GetViewProjectionMatrix());
+
+        glm::mat4 viewProj = m_Session->GetCamera().GetViewProjectionMatrix();
+
+        if (m_ZoomTimer > 0.0f) {
+            float zoomAmount = 1.0f + (m_ZoomTimer * 0.1f);
+            viewProj = glm::scale(glm::mat4(1.0f), { zoomAmount, zoomAmount, 1.0f }) * viewProj;
+        }
+
+        if (m_ShakeTimer > 0.0f) {
+            // Rand value between -0.5 and 0.5 and multiplied by shakeintensity
+            float offsetX = ((rand() % 100) / 100.0f - 0.5f) * m_ShakeIntensity;
+            float offsetY = ((rand() % 100) / 100.0f - 0.5f) * m_ShakeIntensity;
+
+            viewProj = glm::translate(glm::mat4(1.0f), { offsetX, offsetY, 0.0f }) * viewProj;
+        }
+
+        Renderer::BeginScene(viewProj);
 
         Renderer::DrawQuad(m_Session->GetPaddle().GetPosition(), m_Session->GetPaddle().GetSize(), { 0.2f, 0.3f, 0.8f, 1.0f });
 
@@ -117,31 +190,38 @@ public:
             }
         }
 
+        int lives = m_Session->GetPlayer().GetLives();
+
+        for (int i = 0; i < lives; i++) {
+            Renderer::DrawQuad({ -1.4f + (i * 0.15f), -0.85f }, { 0.1f, 0.03f }, { 0.2f, 0.8f, 0.2f, 1.0f });
+        }
+
         if (m_IsPaused) {
             // Transparent Dark Background
             Renderer::DrawQuad({ 0.0f, 0.0f }, { 4.0f, 4.0f }, { 0.0f, 0.0f, 0.0f, 0.7f });
 
+            // Title "PAUSED"
             float titleScale = 0.002f;
             float titleWidth = Renderer::GetTextWidth("PAUSED", titleScale, m_Font);
             Renderer::DrawString("PAUSED", { 0.0f - (titleWidth / 2.0f), 0.4f }, titleScale, { 1.0f, 1.0f, 1.0f, 1.0f }, m_Font);
 
-            float optionBaseScale = 0.0012f;
-            float startY = 0.0f;
-
-            for (int i = 0; i < m_PauseOptions.size(); i++) {
-                glm::vec4 color = { 0.8f, 0.8f, 0.8f, 1.0f };
-                float currentScale = optionBaseScale;
-
-                if (i == m_PauseSelectedIndex) {
-                    color = { 1.0f, 1.0f, 1.0f, 1.0f }; // Selected
-                    currentScale = optionBaseScale * (1.0f + std::sin(m_Time * 2.5) * 0.10f); 
-                }
-
-                float width = Renderer::GetTextWidth(m_PauseOptions[i], currentScale, m_Font);
-                Renderer::DrawString(m_PauseOptions[i], { 0.0f - (width / 2.0f), startY - (i * 0.2f) }, currentScale, color, m_Font);
+            if (m_PauseMenu) {
+                m_PauseMenu->OnRender();
             }
         }
 
         Renderer::EndScene();
+    }
+
+private:
+    void PrepareLevel() {
+        LevelSetup::LoadLevelFromData(m_Session->GetCurrentLevel(), m_Session->GetCurrentLevelIndex());
+
+        m_Session->GetPaddle().SetPosition({ 0.0f, -0.8f });
+        m_Session->GetPaddle().SetSize({ 0.4f, 0.05f });
+
+        m_Session->GetBalls().clear();
+        m_Session->GetBalls().push_back(Ball({ 0.0f, -0.7f }, 0.03f));
+        m_Session->SetIsBallInPlay(false);
     }
 };
