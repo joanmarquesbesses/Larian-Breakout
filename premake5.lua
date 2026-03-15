@@ -15,7 +15,7 @@ group ""
 project "Breakout"
     kind "ConsoleApp" 
     language "C++"
-    cppdialect "C++17"
+    cppdialect "C++20"
     staticruntime "on"
 
     targetdir ("bin/" .. outputdir .. "/%{prj.name}")
@@ -61,11 +61,5 @@ project "Breakout"
 
     filter "configurations:Release"
         defines "ARK_RELEASE"
-        runtime "Release"
-        optimize "on"
-
-    filter "configurations:Dist"
-        defines "ARK_DIST"
-        kind "WindowedApp" 
         runtime "Release"
         optimize "on"

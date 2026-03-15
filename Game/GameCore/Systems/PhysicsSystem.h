@@ -2,13 +2,24 @@
 
 #include <algorithm> // std::clamp
 
+#include "Utils/Random.h"
+
 #include "GameCore/GameSession.h"
+
+struct PhysicsReport {
+    std::vector<Brick*> hitBricks;       
+    std::vector<PowerUp*> hitPowerUps;   
+    std::vector<Ball*> deadBalls;
+};
 
 class PhysicsSystem {
 public:
 
-    void Update(GameSession& session, float dt) {
+    PhysicsReport Update(GameSession& session, float dt) {
 
+        PhysicsReport report;
+
+        // Balls physics
         for (auto& ball : session.GetBalls()) {
             ball.Move(dt);
 
@@ -91,11 +102,8 @@ public:
                             ball.Launch({ ball.GetVelocity().x, -ball.GetVelocity().y });
                         }
 
-                        // Damage
-                        brick.TakeDamage();
-                        if (brick.IsDestroyed()) {
-                            session.GetPlayer().AddScore(100);
-                        }
+                        // Add the hitted brick 
+                        report.hitBricks.push_back(&brick);
 
                         break; // Collide only with one brick per frame
                     }
@@ -103,10 +111,32 @@ public:
             }
 
             if (ball.GetPosition().y < session.GetCurrentLevel().GetBottomLimit()) {
-                session.GetPlayer().LoseLife();
-                session.SetIsBallInPlay(false);
+                ball.Destroy();
+                report.deadBalls.push_back(&ball);
             }
         }
+
+        // Powerups
+        auto& paddle = session.GetPaddle();
+        for (auto& powerUp : session.GetPowerUps()) {
+            if (powerUp.IsDestroyed()) continue;
+
+            powerUp.Move(dt);
+
+            if (powerUp.GetPosition().y < session.GetCurrentLevel().GetBottomLimit()) {
+                powerUp.Destroy();
+                continue;
+            }
+
+            float pX, pY; // not used here but need them for the function, no penetration resolution
+            auto paddleHit = GetCollisionNormal(powerUp.GetPosition(), powerUp.GetSize(), paddle.GetPosition(), paddle.GetSize(), pX, pY);
+
+            if (paddleHit.has_value()) {
+                report.hitPowerUps.push_back(&powerUp);
+            }
+        }
+
+        return report;
     }
 
 private:
@@ -136,5 +166,20 @@ private:
         }
 
         return std::nullopt;
+    }
+
+    void SpawnMultiball(GameSession& session) {
+        if (session.GetBalls().empty()) return;
+
+        Ball mainBall = session.GetBalls()[0];
+
+        Ball newBall1 = mainBall;
+        Ball newBall2 = mainBall;
+
+        newBall1.Launch({ -mainBall.GetVelocity().x, mainBall.GetVelocity().y });
+        newBall2.Launch({ mainBall.GetVelocity().x * 1.2f, mainBall.GetVelocity().y });
+
+        session.GetBalls().push_back(newBall1);
+        session.GetBalls().push_back(newBall2);
     }
 };

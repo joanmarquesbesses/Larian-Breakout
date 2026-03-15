@@ -4,6 +4,8 @@
 
 class LevelSetup { 
 public:
+    static int GetLevelCount() { return LevelCatalog::Levels.size(); }
+
     static void LoadLevelFromData(Level& level, int levelIndex) {
         level.GetBricks().clear();
 

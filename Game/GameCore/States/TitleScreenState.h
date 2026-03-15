@@ -25,13 +25,13 @@ public:
     TitleScreenState() : m_Camera(-1.6f, 1.6f, -0.9f, 0.9f) {}
 
     void OnEnter() override {
-        m_TextFont = ResourceManager::Get<Font>("arial.ttf");
+        m_TextFont = ResourceManager::Get<Font>("BitFont.ttf");
     }
 
     void OnUpdate(Timestep ts) override {
         m_Time += ts.GetSeconds();
 
-        if (PlayerController::ConsumeIfPressed(PlayerAction::Fire)) { // To prevent gameplay launch Ball
+        if (PlayerController::ConsumeIfPressed(PlayerAction::Fire)) {
             if (m_RequestStateChange) {
                 m_RequestStateChange(GameStateType::MainMenu);
             }

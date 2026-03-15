@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <vector>
 
 #include "EngineCore/Timestep.h"
 #include "Assets/ResourceManager.h"
@@ -10,6 +11,7 @@
 #include "GameCore/GameSession.h"
 #include "GameCore/Systems/PaddleSystem.h"
 #include "GameCore/Systems/PhysicsSystem.h"
+#include "GameCore/Systems/ParticleSystem.h"
 #include "GameCore/Services/LevelSetup.h"
 
 class PlayingState : public IGameState {
@@ -32,6 +34,8 @@ private:
     float m_ShakeIntensity = 0.05f;
     float m_ZoomTimer = 0.0f;
 
+    ParticleSystem m_ParticleSystem;
+
 public:
     // Injecció de dependències des del Bootstrap!
     PlayingState(GameSession* session, PaddleSystem* paddleSys, PhysicsSystem* physicsSys)
@@ -39,7 +43,7 @@ public:
     }
 
     void OnEnter() override {
-        m_Font = ResourceManager::Get<Font>("arial.ttf");
+        m_Font = ResourceManager::Get<Font>("BitFont.ttf");
 
         m_PauseMenu = std::make_unique<TextMenu>(
             std::vector<std::string>{"RESUME", "MAIN MENU"},
@@ -47,11 +51,16 @@ public:
             m_Font
         );
 
-        m_Session->GetPlayer().ResetLives();
-        m_Session->GetPlayer().ResetScore();
-        m_Session->SetCurrentLevelIndex(1);
+        if (!m_Session->IsGameActive()) {
+            m_Session->GetPlayer().ResetLives();
+            m_Session->GetPlayer().ResetScore();
+            m_Session->SetCurrentLevelIndex(0);
+            PrepareLevel();
 
-        PrepareLevel();
+            m_Session->SetGameActive(true); 
+        }
+
+        m_IsPaused = false;
     }
 
     void OnUpdate(Timestep ts) override {
@@ -97,6 +106,7 @@ public:
         // Game Over
         if (isDead) {
             if (m_RequestStateChange) m_RequestStateChange(GameStateType::GameOver);
+            m_Session->SetGameActive(false);
             if (!m_Session->GetBalls().empty()) m_Session->GetBalls()[0].Move(gameDt);
         }
 
@@ -115,6 +125,9 @@ public:
                 m_RequestTransition(
                     [this]() {
                         int nextLevel = m_Session->GetCurrentLevelIndex() + 1;
+                        if (nextLevel >= LevelSetup::GetLevelCount()) {
+                            nextLevel = 0; 
+                        }
                         m_Session->SetCurrentLevelIndex(nextLevel);
                         PrepareLevel(); 
                     }
@@ -126,6 +139,17 @@ public:
         // Input
         if (!isDead && !levelComplete) {
             m_PaddleSystem->Update(*m_Session, gameDt);
+            
+            auto& paddle = m_Session->GetPaddle();
+            glm::vec2 pos = paddle.GetPosition();
+            float halfWidth = paddle.GetSize().x / 2.0f;
+
+            float minX = m_Session->GetCurrentLevel().GetLeftLimit() + halfWidth;
+            float maxX = m_Session->GetCurrentLevel().GetRightLimit() - halfWidth;
+
+            // std::clamp pos.x form minX to maxX
+            pos.x = std::clamp(pos.x, minX, maxX);
+            paddle.SetPosition(pos);
 
             if (!m_Session->GetIsBallInPlay()) {
                 if (!m_Session->GetBalls().empty()) {
@@ -133,7 +157,7 @@ public:
                 }
                 if (PlayerController::IsActionPressed(PlayerAction::Fire)) {
                     m_Session->SetIsBallInPlay(true);
-                    if (!m_Session->GetBalls().empty()) m_Session->GetBalls()[0].Launch({ 1.0f, 1.5f });
+                    if (!m_Session->GetBalls().empty()) m_Session->GetBalls()[0].Launch({ Random::Range(-1.0f, 1.0f), 1.5f });
                 }
             }
         }
@@ -143,18 +167,84 @@ public:
 
         // Ball Phyics
         if (m_Session->GetIsBallInPlay()) {
-            m_PhysicsSystem->Update(*m_Session, gameDt);
+            // Check what physics report a act
+            PhysicsReport report = m_PhysicsSystem->Update(*m_Session, gameDt);
 
-            if (m_Session->GetPlayer().GetScore() > previousScore) {
-                m_ZoomTimer = 0.15f;
+            for (Brick* brick : report.hitBricks) {
+                brick->TakeDamage();
+
+                if (brick->IsDestroyed()) {
+                    m_Session->GetPlayer().AddScore(100);
+                    m_ZoomTimer = 0.15f;
+
+                    if ((rand() % 100) < 20) {
+                        PowerUpType randomType = static_cast<PowerUpType>(rand() % 3);
+                        m_Session->GetPowerUps().push_back(PowerUp(brick->GetPosition(), { 0.1f, 0.1f }, randomType));
+                    }
+
+                    ParticleProps brickExplosion;
+                    brickExplosion.Position = brick->GetPosition();
+                    brickExplosion.Velocity = { 0.0f, 0.0f }; // Sortiran en totes direccions
+                    brickExplosion.VelocityVariation = { 1.5f, 1.5f }; // Velocitat de sortida
+                    brickExplosion.SizeBegin = 0.04f;
+                    brickExplosion.SizeEnd = 0.0f; // Es fan petites fins desaparèixer
+                    brickExplosion.SizeVariation = 0.01f;
+                    brickExplosion.ColorBegin = brick->GetColor(); // Mateix color que el totxo!
+                    brickExplosion.ColorEnd = { brick->GetColor().r, brick->GetColor().g, brick->GetColor().b, 0.0f }; // S'esvaeixen
+                    brickExplosion.LifeTime = 0.5f;
+
+                    // Emitim 10 partícules per totxo
+                    for (int i = 0; i < 10; i++) {
+                        m_ParticleSystem.Emit(brickExplosion);
+                    }
+
+                }
+                else {
+                    m_Session->GetPlayer().AddScore(10);
+                }
             }
 
-            if (m_Session->GetPlayer().GetLives() < previousLives) {
-                m_HitPauseTimer = 0.1f; 
-                m_ShakeTimer = 0.3f;     
+            for (PowerUp* powerUp : report.hitPowerUps) {
+                switch (powerUp->GetType()) {
+                    case PowerUpType::ExtraLife: 
+                        if (m_Session->GetPlayer().GetLives() < 3) {
+                            m_Session->GetPlayer().AddLife();
+                        }
+                        else {
+                            m_Session->GetPlayer().AddScore(500);
+                        }
+                        break;
+                    case PowerUpType::Enlarge: 
+                        m_Session->GetPaddle().SetSize({ m_Session->GetPaddle().GetSize().x * 1.5f, m_Session->GetPaddle().GetSize().y });
+                        break;
+                    case PowerUpType::Multiball: 
+                        SpawnMultiball(); 
+                        break;
+                }
+                powerUp->Destroy(); 
+            }
+            
+            PerformGarbageCollection();
+
+            if (m_Session->GetBalls().empty()) {
+                m_Session->GetPlayer().LoseLife();
+                m_Session->SetIsBallInPlay(false);
+
+                m_Session->GetPowerUps().clear();
+                m_Session->GetPaddle().SetSize({ 0.4f, 0.05f });
+
+                m_HitPauseTimer = 0.1f;
+                m_ShakeTimer = 0.3f;
                 m_ShakeIntensity = 0.04f;
+
+                if (!m_Session->GetPlayer().IsDead()) {
+                    m_Session->GetPaddle().SetPosition({ 0.0f, -0.8f });
+                    m_Session->GetBalls().push_back(Ball({ 0.0f, -0.7f }, 0.03f));
+                }
             }
         }
+
+        m_ParticleSystem.OnUpdate(gameDt);
     }
 
     void OnRender() override {
@@ -190,11 +280,22 @@ public:
             }
         }
 
+        for (const auto& powerUp : m_Session->GetPowerUps()) {
+            if (!powerUp.IsDestroyed()) {
+                Renderer::DrawQuad(powerUp.GetPosition(), powerUp.GetSize(), powerUp.GetColor());
+            }
+        }
+
         int lives = m_Session->GetPlayer().GetLives();
 
         for (int i = 0; i < lives; i++) {
             Renderer::DrawQuad({ -1.4f + (i * 0.15f), -0.85f }, { 0.1f, 0.03f }, { 0.2f, 0.8f, 0.2f, 1.0f });
         }
+
+        std::string scoreText = "SCORE: " + std::to_string(m_Session->GetPlayer().GetScore());
+        Renderer::DrawString(scoreText, { -1.57f, 0.82f }, 0.001f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_Font);
+
+        m_ParticleSystem.OnRender();
 
         if (m_IsPaused) {
             // Transparent Dark Background
@@ -220,8 +321,34 @@ private:
         m_Session->GetPaddle().SetPosition({ 0.0f, -0.8f });
         m_Session->GetPaddle().SetSize({ 0.4f, 0.05f });
 
+        m_Session->GetPowerUps().clear();
+
         m_Session->GetBalls().clear();
         m_Session->GetBalls().push_back(Ball({ 0.0f, -0.7f }, 0.03f));
         m_Session->SetIsBallInPlay(false);
+    }
+
+    void SpawnMultiball() {
+        if (m_Session->GetBalls().empty()) return;
+
+        int currentBallCount = m_Session->GetBalls().size();
+
+        for (int i = 0; i < currentBallCount; i++) {
+            Ball mainBall = m_Session->GetBalls()[i];
+
+            Ball newBall1 = mainBall;
+            Ball newBall2 = mainBall;
+
+            newBall1.Launch({ -mainBall.GetVelocity().x, mainBall.GetVelocity().y });
+            newBall2.Launch({ mainBall.GetVelocity().x * 1.2f, mainBall.GetVelocity().y });
+
+            m_Session->GetBalls().push_back(newBall1);
+            m_Session->GetBalls().push_back(newBall2);
+        }
+    }
+
+    void PerformGarbageCollection() {
+        std::erase_if(m_Session->GetPowerUps(), [](const PowerUp& p) { return p.IsDestroyed(); });
+        std::erase_if(m_Session->GetBalls(), [](const Ball& b) { return b.IsDestroyed(); });
     }
 };

@@ -19,7 +19,11 @@ public:
 
     int GetLives() { return m_Lives; }
     void LoseLife() { if (m_Lives > 0) m_Lives--; }
+    void AddLife() { m_Lives++; }
     bool IsDead() const { return m_Lives <= 0; }
+
+    void SetHighScore(int score) { m_MaxScore = score; }
+    int GetHighScore() { return m_MaxScore; }
 
     void ResetLives() { m_Lives = 3; }
     void ResetScore() { m_Score = 0; }

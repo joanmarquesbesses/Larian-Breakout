@@ -7,7 +7,7 @@ private:
     glm::vec2 m_Velocity;
 
     float m_Radius;
-
+    bool m_IsDestroyed = false;
 public:
 
     Ball() = default;
@@ -32,4 +32,7 @@ public:
 
     float GetSize() const { return m_Radius; }
     void SetSize(float radius) { m_Radius = radius; }
+
+    bool IsDestroyed() const { return m_IsDestroyed; }
+    void Destroy() { m_IsDestroyed = true; }
 };

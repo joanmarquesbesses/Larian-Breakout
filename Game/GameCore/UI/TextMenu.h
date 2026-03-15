@@ -89,7 +89,8 @@ public:
         }
 
         // Accept input
-        if (PlayerController::ConsumeIfPressed(PlayerAction::Accept)) {
+        if (PlayerController::ConsumeIfPressed(PlayerAction::Accept) ||
+            PlayerController::ConsumeIfPressed(PlayerAction::Fire)) {
             return m_SelectedIndex;
         }
 

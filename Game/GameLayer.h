@@ -67,7 +67,7 @@ public:
             m_CurrentState = std::make_unique<TitleScreenState>();
             break;
         case GameStateType::MainMenu:
-            m_CurrentState = std::make_unique<MainMenuState>();
+            m_CurrentState = std::make_unique<MainMenuState>(&m_Session);
             break;
         case GameStateType::Playing:
             m_CurrentState = std::make_unique<PlayingState>(&m_Session, m_PaddleSystem.get(), m_PhysicsSystem.get());

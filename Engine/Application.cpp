@@ -4,6 +4,7 @@
 
 #include "Assets/ResourceManager.h"
 #include "Renderer/Renderer.h"
+#include "Utils/Random.h"
 // #include "AudioEngine.h"
 
 Application* Application::s_Instance = nullptr;
@@ -21,6 +22,7 @@ Application::Application(const std::string& name)
     m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 
     // Aquí aniran els Inits dels teus sistemes (quan els portis)
+    Random::Init();
     Renderer::Init();
     // AudioEngine::Init();
 }
