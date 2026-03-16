@@ -6,7 +6,7 @@
 #include "Assets/ResourceManager.h"
 
 #include "../UI/TextMenu.h"
-#include "../Services/SerializeScore.h"
+#include "../Services/ScoreSerializer.h"
 
 class MainMenuState : public IGameState {
 private:
@@ -19,6 +19,9 @@ private:
 
     float m_Time = 0.0f;
     bool m_CanContinue = false;
+    bool m_IsTransitioning = false;
+
+    std::shared_ptr<AudioClip> m_ConfirmSFX;
 
     std::shared_ptr<Texture2D> m_Nebula;
 
@@ -30,16 +33,20 @@ public:
     MainMenuState(GameSession* session) : m_Session(session), m_Camera(-1.6f, 1.6f, -0.9f, 0.9f) {}
 
     void OnEnter() override {
-        m_Font = ResourceManager::Get<Font>("BitFont.ttf");
-		m_Nebula = ResourceManager::Get<Texture2D>("nebula.png");
+        m_Font = ResourceManager::Get<Font>("Assets/Font/BitFont.ttf");
+		m_Nebula = ResourceManager::Get<Texture2D>("Assets/Textures/nebula.png");
+        AudioEngine::PlayMusic("Assets/Music/TitleScreen.mp3", true);
+		m_ConfirmSFX = ResourceManager::Get<AudioClip>("Assets/SFX/Accept.mp3");
 
-        m_Session->GetPlayer().SetHighScore(SerializeScore::LoadHighScore());
+        m_Session->GetPlayer().SetHighScore(ScoreSerializer::LoadHighScore());
 
+		m_Time = 0.0f;
 
         m_CanContinue = m_Session->IsGameActive();
+        m_IsTransitioning = false;
 
-        std::vector<std::string> options = { "CONTINUE", "NEW GAME", "OPTIONS", "QUIT" };
-        std::vector<float> yPositions = { 0.4f, 0.1f, -0.2f, -0.5f }; //options y pos
+        std::vector<std::string> options = { "CONTINUE", "NEW GAME", "QUIT" };
+        std::vector<float> yPositions = { 0.3f, 0.0f, -0.3f }; //options y pos
 
         m_MainMenu = std::make_unique<TextMenu>(options, yPositions, m_Font);
         m_MainMenu->SetSelectedIndex(m_CanContinue ? 0 : 1);
@@ -64,6 +71,8 @@ public:
         }
         m_BgParticleSystem.OnUpdate(ts);
 
+        if (m_Time < 0.5f) return;
+
         auto result = m_MainMenu->OnUpdate(m_Camera, ts.GetSeconds(), !m_CanContinue);
 
         // If true, user have execute a menu option
@@ -74,17 +83,22 @@ public:
     }
 
     void ExecuteAction(int index) {
-        if (index == 0 && m_CanContinue) { // CONTINUE
-            if (m_RequestStateChange) m_RequestStateChange(GameStateType::Playing);
+        if (index == 0 && m_CanContinue && !m_IsTransitioning) { // CONTINUE
+            m_IsTransitioning = true;
+            if (m_RequestStateChange) {
+                m_RequestStateChange(GameStateType::Playing);
+                if (m_ConfirmSFX) AudioEngine::Play(m_ConfirmSFX->GetPath());
+            }
         }
-        else if (index == 1) { // NEW GAME
+        else if (index == 1 && !m_IsTransitioning) { // NEW GAME
             m_Session->SetGameActive(false);
-            if (m_RequestStateChange) m_RequestStateChange(GameStateType::Playing);
+            m_IsTransitioning = true;
+            if (m_RequestStateChange) {
+                m_RequestStateChange(GameStateType::Playing);
+                if (m_ConfirmSFX) AudioEngine::Play(m_ConfirmSFX->GetPath());
+            }
         }
-        else if (index == 2) { // OPTIONS
-            if (m_RequestStateChange) m_RequestStateChange(GameStateType::Options);
-        }
-        else if (index == 3) { // QUIT
+        else if (index == 2) { // QUIT
             Application::Get().Close();
         }
     }

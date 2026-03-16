@@ -7,7 +7,7 @@
 
 #include "GameCore/GameSession.h"
 #include "../Controllers/PlayerController.h"
-#include "../Services/SerializeScore.h"
+#include "../Services/ScoreSerializer.h"
 
 class GameOverState : public IGameState {
 private:
@@ -40,9 +40,11 @@ public:
     GameOverState(GameSession* session) : m_Session(session), m_Camera(-1.6f, 1.6f, -0.9f, 0.9f) {}
 
     void OnEnter() override {
-        m_TextFont = ResourceManager::Get<Font>("BitFont.ttf");
-        m_Nebula = ResourceManager::Get<Texture2D>("nebula.png");
-        m_NewHighScore = SerializeScore::SaveHighScore(m_Session->GetPlayer().GetScore());
+        m_TextFont = ResourceManager::Get<Font>("Assets/Font/BitFont.ttf");
+        m_Nebula = ResourceManager::Get<Texture2D>("Assets/Textures/nebula.png");
+        m_NewHighScore = ScoreSerializer::SaveHighScore(m_Session->GetPlayer().GetScore());
+        AudioEngine::StopMusic();
+        AudioEngine::PlayMusic("Assets/Music/GameOver.mp3", true);
 
         m_Time = 0.0f;
         m_IsTransitioning = false;
@@ -67,6 +69,8 @@ public:
             m_BgParticleSystem.Emit(ParticlePresets::GetStar());
         }
         m_BgParticleSystem.OnUpdate(dt);
+
+		if (m_Time < 0.5f) return;
 
         if (!m_IsTransitioning && PlayerController::ConsumeIfPressed(PlayerAction::Fire)) {
             m_IsTransitioning = true;

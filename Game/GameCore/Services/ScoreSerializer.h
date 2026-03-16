@@ -2,7 +2,7 @@
 #include <fstream>
 #include <string>
 
-class SerializeScore {
+class ScoreSerializer {
 public:
     static int LoadHighScore() {
         std::ifstream file("highscore.txt");

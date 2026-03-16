@@ -24,6 +24,7 @@ private:
 
     std::shared_ptr<Texture2D> m_HeartTexture;
     std::shared_ptr<Texture2D> m_NebulaTexture;
+	std::shared_ptr<Texture2D> m_BombTexture;
 
     float m_NebulaOffsetV = 0.0f;
 	float m_NebulaOffsetU = 0.0f;
@@ -32,9 +33,9 @@ private:
 
 public:
 	GameRenderer(std::shared_ptr<Font> font, ParticleSystem* pSystem, ParticleSystem* bgPSystem,
-        std::shared_ptr<Texture2D> heartTex, std::shared_ptr<Texture2D> nebulaTex)
+        std::shared_ptr<Texture2D> heartTex, std::shared_ptr<Texture2D> nebulaTex, std::shared_ptr<Texture2D> bombText)
         : m_Font(font), m_ParticleSystem(pSystem), m_BgParticleSystem(bgPSystem),
-        m_HeartTexture(heartTex), m_NebulaTexture(nebulaTex) {
+        m_HeartTexture(heartTex), m_NebulaTexture(nebulaTex), m_BombTexture(bombText) {
     }
 
     void TriggerShake(float duration, float intensity) { m_ShakeTimer = duration; m_ShakeIntensity = intensity; }
@@ -62,7 +63,7 @@ public:
         m_FloatingTexts.push_back({ text, pos, color, 1.0f, 1.0f });
     }
 
-    void Render(GameSession& session, bool isPaused, TextMenu* pauseMenu) {
+    void Render(GameSession& session, bool isPaused, TextMenu* pauseMenu, float aimAngle) {
         Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
         Renderer::Clear();
 
@@ -97,6 +98,23 @@ public:
         }
 
 		m_BgParticleSystem->OnRender();
+
+        if(aimAngle != -999.0f && !session.GetBalls().empty()) {
+            std::string startText = "PRESS SPACE TO LAUNCH!";
+            float textScale = 0.001f;
+            float textWidth = Renderer::GetTextWidth(startText, textScale, m_Font);
+            Renderer::DrawString(startText, { session.GetBalls()[0].GetPosition().x - (textWidth / 2.0f), session.GetBalls()[0].GetPosition().y + 0.1f }, textScale, { 1.0f, 1.0f, 1.0f, 1.0f }, m_Font);
+
+            if (aimAngle != -999.0f && !session.GetBalls().empty()) {
+                glm::vec2 startPos = session.GetBalls()[0].GetPosition();
+                glm::vec2 dir = { std::sin(aimAngle), std::cos(aimAngle) };
+
+                for (int i = 1; i <= 5; i++) {
+                    glm::vec2 dotPos = startPos + (dir * (i * 0.15f));
+                    Renderer::DrawQuad(dotPos, { 0.02f, 0.02f }, { 1.0f, 1.0f, 1.0f, 0.4f });
+                }
+            }
+		}
 
         auto paddleTex = session.GetPaddle().GetTexture();
         if (paddleTex) {
@@ -133,7 +151,18 @@ public:
                     Renderer::DrawQuad(brick.GetPosition(), brick.GetSize(), idleTex);
                 }
                 else {
-                    Renderer::DrawQuad(brick.GetPosition(), brick.GetSize(), brick.GetColor());
+                    if (brick.GetMaxHealth() == -1) {
+                        Renderer::DrawQuad(brick.GetPosition(), brick.GetSize(), { 0.4f, 0.4f, 0.4f, 1.0f });
+                    }
+                    else {
+                        Renderer::DrawQuad(brick.GetPosition(), brick.GetSize(), brick.GetColor());
+                    }
+                }
+
+                if (brick.IsExplosive() && m_BombTexture) {
+					auto bombSize = brick.GetSize() * 0.5f;
+					bombSize.x *= 0.8f; // Make it a bit narrower to fit better
+                    Renderer::DrawQuad(brick.GetPosition(), bombSize, m_BombTexture);
                 }
             }
         }

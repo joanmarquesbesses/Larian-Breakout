@@ -9,7 +9,6 @@
 
 #include "GameCore/States/TitleScreenState.h"
 #include "GameCore/States/MainMenuState.h"
-#include "GameCore/States/OptionsState.h"
 #include "GameCore/States/PlayingState.h"
 #include "GameCore/States/GameOverState.h"
 
@@ -77,9 +76,6 @@ public:
         case GameStateType::Playing:
             m_CurrentState = std::make_unique<PlayingState>(&m_Session, m_PaddleSystem.get(), m_PhysicsSystem.get(), 
                 m_BrickSystem.get(), m_GameFlowSystem.get());
-            break;
-        case GameStateType::Options:
-            m_CurrentState = std::make_unique<OptionsState>();
             break;
         case GameStateType::GameOver:
             m_CurrentState = std::make_unique<GameOverState>(&m_Session);

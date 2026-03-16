@@ -17,6 +17,9 @@ public:
         bool levelCleared = true;
 
         for (const auto& brick : session.GetCurrentLevel().GetBricks()) {
+            if (brick.GetMaxHealth() == -1) {
+                continue;
+            }
 			if (!brick.IsDestroyed()) levelComplete = false; // If any brick is still alive, the level is not complete
 			if (!brick.IsDestroyed() && !brick.IsDying()) levelCleared = false; // If any brick is not destroyed and not dying, the level is not cleared
         }

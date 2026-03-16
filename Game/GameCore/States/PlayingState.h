@@ -7,6 +7,7 @@
 #include "Assets/ResourceManager.h"
 #include "Renderer/Renderer.h"
 #include "Utils/Random.h"
+#include "Audio/AudioEngine.h"
 
 #include "IGameState.h"
 #include "GameCore/GameSession.h"
@@ -32,12 +33,22 @@ private:
     std::unique_ptr<GameRenderer> m_GameRenderer;
     std::unique_ptr<TextMenu> m_PauseMenu;
 
+    std::shared_ptr<AudioClip> m_BallBounce;
+    std::shared_ptr<AudioClip> m_BrickDestroyed;
+    std::shared_ptr<AudioClip> m_LoseLife;
+    std::shared_ptr<AudioClip> m_LostGame;
+    std::shared_ptr<AudioClip> m_NextLevel;
+    std::shared_ptr<AudioClip> m_PowerUp;
+
     float m_Time = 0.0f;
 
     // Game feel
     float m_TimeScale = 1.0f;      
     float m_TransitionTimer = 0.0f;
     FlowState m_PendingTransitionState = FlowState::Playing;
+
+    float m_AimAngle = 0.0f;
+    float m_AimDir = 1.0f;
 
     ParticleSystem m_ParticleSystem;
     ParticleSystem m_BgParticleSystem;
@@ -54,15 +65,23 @@ public:
     {}
 
     void OnEnter() override {
-        m_Font = ResourceManager::Get<Font>("BitFont.ttf");
-        m_Spritesheet = ResourceManager::Get<Texture2D>("spritesheet-breakout.png");
-        auto heartTex = ResourceManager::Get<Texture2D>("heart.png");
-		auto nebulaTex = ResourceManager::Get<Texture2D>("nebula.png");
+        m_Font = ResourceManager::Get<Font>("Assets/Font/BitFont.ttf");
+        m_Spritesheet = ResourceManager::Get<Texture2D>("Assets/Textures/spritesheet-breakout.png");
+        auto heartTex = ResourceManager::Get<Texture2D>("Assets/Textures/heart.png");
+		auto nebulaTex = ResourceManager::Get<Texture2D>("Assets/Textures/nebula.png");
+		auto bombTex = ResourceManager::Get<Texture2D>("Assets/Textures/bomb.png");
+
+		m_BallBounce = ResourceManager::Get<AudioClip>("Assets/SFX/BallBounce.mp3");
+		m_BrickDestroyed = ResourceManager::Get<AudioClip>("Assets/SFX/BrickDestroyed.mp3");
+		m_LoseLife = ResourceManager::Get<AudioClip>("Assets/SFX/LoseLife.mp3");
+		m_LostGame = ResourceManager::Get<AudioClip>("Assets/SFX/LostGame.mp3");
+		m_NextLevel = ResourceManager::Get<AudioClip>("Assets/SFX/NextLevel.mp3");
+		m_PowerUp = ResourceManager::Get<AudioClip>("Assets/SFX/PowerUp.mp3");
 
         m_PaddleTexture = SubTexture2D::CreateFromPixelCoords(m_Spritesheet, 32.0f, 112.0f, 162.0f, 14.0f);
         m_BallTexture = SubTexture2D::CreateFromPixelCoords(m_Spritesheet, 32.0f, 32.0f, 16.0f, 16.0f);
 
-        m_GameRenderer = std::make_unique<GameRenderer>(m_Font, &m_ParticleSystem, &m_BgParticleSystem, heartTex, nebulaTex);
+        m_GameRenderer = std::make_unique<GameRenderer>(m_Font, &m_ParticleSystem, &m_BgParticleSystem, heartTex, nebulaTex, bombTex);
 
         m_PauseMenu = std::make_unique<TextMenu>(
             std::vector<std::string>{"RESUME", "MAIN MENU"},
@@ -78,8 +97,10 @@ public:
 
             m_Session->SetGameActive(true); 
         }
-
-        m_IsPaused = false;
+        else {
+            m_IsPaused = true;
+            m_PauseMenu->SetSelectedIndex(0);
+        }
 
         for (int i = 0; i < 40; i++) {
             ParticleProps initialStar = ParticlePresets::GetStar();
@@ -125,11 +146,14 @@ public:
 
             if (state == FlowState::GameOver) {
                 m_TransitionTimer = 2.0f;
+                if (m_LostGame) AudioEngine::Play(m_LostGame->GetPath());
             }
 
         }
         else if (state == FlowState::BallLost && m_PendingTransitionState == FlowState::Playing) {
             m_GameRenderer->TriggerShake(0.3f, 0.04f);
+
+            if (m_LoseLife) AudioEngine::Play(m_LoseLife->GetPath());
 
             m_Session->SetIsBallInPlay(false);
             m_Session->GetPowerUps().clear();
@@ -163,10 +187,16 @@ public:
             if (!m_Session->GetIsBallInPlay()) {
                 if (!m_Session->GetBalls().empty()) {
                     m_Session->GetBalls()[0].SetPosition({ m_Session->GetPaddle().GetPosition().x, m_Session->GetPaddle().GetPosition().y + 0.15f });
+                    m_AimAngle += 1.2f * realDt * m_AimDir;
+                    if (m_AimAngle > 1.0f) { m_AimAngle = 1.0f; m_AimDir = -1.0f; } // 1.0 radian = aprox 57 graus
+                    if (m_AimAngle < -1.0f) { m_AimAngle = -1.0f; m_AimDir = 1.0f; }
                 }
                 if (PlayerController::IsActionPressed(PlayerAction::Fire)) {
                     m_Session->SetIsBallInPlay(true);
-                    if (!m_Session->GetBalls().empty()) m_Session->GetBalls()[0].Launch({ Random::Range(-1.0f, 1.0f), 1.5f });
+                    if (!m_Session->GetBalls().empty()) {
+                        glm::vec2 launchDir = { std::sin(m_AimAngle), std::cos(m_AimAngle) };
+                        m_Session->GetBalls()[0].Launch(launchDir * 1.0f);
+                    }
                 }
             }
         }
@@ -177,12 +207,28 @@ public:
 
             std::vector<Brick*> bricksToProcess = report.hitBricks;
 
+            if (report.ballBounced || !report.hitBricks.empty()) {
+                if (m_BallBounce) AudioEngine::Play(m_BallBounce->GetPath());
+            }
+
             for (size_t i = 0; i < bricksToProcess.size(); i++) {
                 Brick* brick = bricksToProcess[i];
 
                 if (brick->IsDying()) continue;
 
+				if (brick->GetMaxHealth() == -1) { // Indestructible brick, just skip it
+                    continue; 
+                }
+
                 brick->TakeDamage();
+
+                for (auto& ball : m_Session->GetBalls()) {
+                    glm::vec2 currentVel = ball.GetVelocity();
+                    float currentSpeed = glm::length(currentVel);
+                    if (currentSpeed < 2.2f) {
+                        ball.SetVelocity(currentVel * 1.015f);
+                    }
+                }
 
                 if (brick->GetHealth() <= 0) {
                     brick->StartDying();
@@ -198,8 +244,10 @@ public:
                         }
                     }
 
+					// If this was the last brick, start the level complete transition and play the next level sfx
                     if (isLastBrick && m_PendingTransitionState == FlowState::Playing) {
                         m_TimeScale = 0.2f; 
+                        if (m_NextLevel) AudioEngine::Play(m_NextLevel->GetPath());
                     }
 
                     if (brick->IsExplosive()) {
@@ -211,6 +259,9 @@ public:
                             bricksToProcess.push_back(neighbor);
                         }
                     }
+                    else {
+                        if (m_BrickDestroyed) AudioEngine::Play(m_BrickDestroyed->GetPath());
+                    }
 
                     if ((rand() % 100) < 20) {
                         PowerUpType randomType = static_cast<PowerUpType>(rand() % 3);
@@ -219,7 +270,7 @@ public:
                         switch (randomType)
                         {
                         case PowerUpType::ExtraLife:
-                            newPowerUp.SetTexture(ResourceManager::Get<Texture2D>("heart.png"));
+                            newPowerUp.SetTexture(ResourceManager::Get<Texture2D>("Assets/Textures/heart.png"));
                             break;
                         case PowerUpType::Enlarge:
 							newPowerUp.SetSubTexture(m_PaddleTexture);
@@ -268,6 +319,7 @@ public:
                     break;
                 }
                 powerUp->Destroy();
+				if(m_PowerUp) AudioEngine::Play(m_PowerUp->GetPath());
             }
 
             for (const auto& powerUp : m_Session->GetPowerUps()) {
@@ -321,7 +373,8 @@ public:
     }
 
     void OnRender() override {
-		m_GameRenderer->Render(*m_Session, m_IsPaused, m_PauseMenu.get());
+        float currentAim = m_Session->GetIsBallInPlay() ? -999.0f : m_AimAngle;
+		m_GameRenderer->Render(*m_Session, m_IsPaused, m_PauseMenu.get(), currentAim);
     }
 
 private:
@@ -331,10 +384,12 @@ private:
 
         m_BrickSystem->SetupBricks(*m_Session, m_Spritesheet);
         for (auto& brick : m_Session->GetCurrentLevel().GetBricks()) {
-            if (brick.GetMaxHealth() == 3) {
-                brick.SetExplosive(true);
+			if (brick.GetMaxHealth() == -1) { // Indestructible brick
+                auto invincibleTex = SubTexture2D::CreateFromPixelCoords(m_Spritesheet, 32.0f, 288.0f, 32.0f, 16.0f);
+                brick.SetIdleTexture(invincibleTex);
             }
         }
+
         m_Session->GetPaddle().SetTexture(m_PaddleTexture);
 
         m_Session->GetPaddle().SetPosition({ 0.0f, -0.8f });

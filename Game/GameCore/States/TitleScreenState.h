@@ -37,9 +37,10 @@ public:
     TitleScreenState() : m_Camera(-1.6f, 1.6f, -0.9f, 0.9f) {}
 
     void OnEnter() override {
-        m_TextFont = ResourceManager::Get<Font>("BitFont.ttf");
-        m_ConfirmSFX = ResourceManager::Get<AudioClip>("accept.mp3");
-        m_NebulaTexture = ResourceManager::Get<Texture2D>("nebula.png");
+        m_TextFont = ResourceManager::Get<Font>("Assets/Font/BitFont.ttf");
+        m_ConfirmSFX = ResourceManager::Get<AudioClip>("Assets/SFX/Accept.mp3");
+        m_NebulaTexture = ResourceManager::Get<Texture2D>("Assets/Textures/nebula.png");
+        AudioEngine::PlayMusic("Assets/Music/TitleScreen.mp3", true);
 
         for (int i = 0; i < 40; i++) {
             ParticleProps initialStar = ParticlePresets::GetStar();

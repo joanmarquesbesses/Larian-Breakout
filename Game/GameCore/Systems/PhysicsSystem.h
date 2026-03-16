@@ -10,6 +10,7 @@ struct PhysicsReport {
     std::vector<Brick*> hitBricks;       
     std::vector<PowerUp*> hitPowerUps;   
     std::vector<Ball*> deadBalls;
+    bool ballBounced = false;
 };
 
 class PhysicsSystem {
@@ -32,18 +33,21 @@ public:
             if (pos.x - radius <= session.GetCurrentLevel().GetLeftLimit()) {
                 ball.SetPosition({ session.GetCurrentLevel().GetLeftLimit() + radius, pos.y }); 
                 ball.Launch({ std::abs(ball.GetVelocity().x), ball.GetVelocity().y });
+                report.ballBounced = true;
             }
 
             // Right Wall
             else if (pos.x + radius >= session.GetCurrentLevel().GetRightLimit()) {
                 ball.SetPosition({ session.GetCurrentLevel().GetRightLimit() - radius, pos.y });
                 ball.Launch({ -std::abs(ball.GetVelocity().x), ball.GetVelocity().y });
+                report.ballBounced = true;
             }
 
             // Top
             if (pos.y + radius >= session.GetCurrentLevel().GetTopLimit()) {
                 ball.SetPosition({ pos.x, session.GetCurrentLevel().GetTopLimit() - radius });
                 ball.Launch({ ball.GetVelocity().x, -std::abs(ball.GetVelocity().y) });
+                report.ballBounced = true;
             }
 
             // Paddle
@@ -53,6 +57,7 @@ public:
             if (paddleHit.has_value()) {
                 glm::vec2 normal = paddleHit.value();
                 if (normal.y > 0.0f) {
+                    report.ballBounced = true;
                     // Penetration resolution
                     ball.SetPosition({ ball.GetPosition().x, ball.GetPosition().y + penY });
 
@@ -90,6 +95,8 @@ public:
                 auto hitNormal = GetCollisionNormal(ball.GetPosition(), ballSize, brick.GetPosition(), brick.GetSize(), penX, penY);
 
                 if (hitNormal.has_value()) {
+                    report.ballBounced = true;
+
                     glm::vec2 normal = hitNormal.value();
 
                     // Peneration resolution
