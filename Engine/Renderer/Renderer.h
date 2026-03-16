@@ -5,6 +5,7 @@
 #include "VertexArray.h"
 #include "Shader.h"
 #include "Texture2D.h"
+#include "SubTexture2D.h"
 #include "Font.h"
 
 class Renderer
@@ -38,6 +39,9 @@ public:
 
     // Text Util
     static float GetTextWidth(const std::string& text, float scale, const std::shared_ptr<Font>& font);
+
+	// Subtexture
+    static void DrawQuad(const glm::vec2& position, const glm::vec2& size, const std::shared_ptr<SubTexture2D>& subtexture, const glm::vec4& color = glm::vec4(1.0f));
 
 private:
     static void StartBatch();

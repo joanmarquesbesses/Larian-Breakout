@@ -4,9 +4,12 @@
 
 #include "GameCore/Systems/PaddleSystem.h"
 #include "GameCore/Systems/PhysicsSystem.h"
+#include "GameCore/Systems/BrickSystem.h"
+#include "GameCore/Systems/GameFlowSystem.h"
 
 #include "GameCore/States/TitleScreenState.h"
 #include "GameCore/States/MainMenuState.h"
+#include "GameCore/States/OptionsState.h"
 #include "GameCore/States/PlayingState.h"
 #include "GameCore/States/GameOverState.h"
 
@@ -17,6 +20,8 @@ private:
 
     std::unique_ptr<PaddleSystem> m_PaddleSystem;
     std::unique_ptr<PhysicsSystem> m_PhysicsSystem;
+	std::unique_ptr<BrickSystem> m_BrickSystem;
+	std::unique_ptr<GameFlowSystem> m_GameFlowSystem;
 
     std::unique_ptr<IGameState> m_CurrentState;
 
@@ -70,7 +75,11 @@ public:
             m_CurrentState = std::make_unique<MainMenuState>(&m_Session);
             break;
         case GameStateType::Playing:
-            m_CurrentState = std::make_unique<PlayingState>(&m_Session, m_PaddleSystem.get(), m_PhysicsSystem.get());
+            m_CurrentState = std::make_unique<PlayingState>(&m_Session, m_PaddleSystem.get(), m_PhysicsSystem.get(), 
+                m_BrickSystem.get(), m_GameFlowSystem.get());
+            break;
+        case GameStateType::Options:
+            m_CurrentState = std::make_unique<OptionsState>();
             break;
         case GameStateType::GameOver:
             m_CurrentState = std::make_unique<GameOverState>(&m_Session);

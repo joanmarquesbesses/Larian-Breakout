@@ -5,7 +5,7 @@
 #include "Assets/ResourceManager.h"
 #include "Renderer/Renderer.h"
 #include "Utils/Random.h"
-// #include "AudioEngine.h"
+#include "Audio/AudioEngine.h"
 
 Application* Application::s_Instance = nullptr;
 
@@ -24,7 +24,7 @@ Application::Application(const std::string& name)
     // Aquí aniran els Inits dels teus sistemes (quan els portis)
     Random::Init();
     Renderer::Init();
-    // AudioEngine::Init();
+    AudioEngine::Init();
 }
 
 Application::~Application()
@@ -33,7 +33,7 @@ Application::~Application()
 
     m_Window.reset();
     Renderer::Shutdown();
-    // AudioEngine::Shutdown();
+    AudioEngine::Shutdown();
     ResourceManager::Clear();
 }
 

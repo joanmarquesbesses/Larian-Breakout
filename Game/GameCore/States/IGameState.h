@@ -4,6 +4,7 @@
 enum class GameStateType {
     TitleScreen,
     MainMenu,
+    Options,
     Playing,
     GameOver
 };

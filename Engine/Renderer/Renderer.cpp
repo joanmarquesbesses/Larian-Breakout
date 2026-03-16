@@ -361,3 +361,11 @@ float Renderer::GetTextWidth(const std::string& text, float scale, const std::sh
     }
     return xOffset * scale;
 }
+
+void Renderer::DrawQuad(const glm::vec2& position, const glm::vec2& size, const std::shared_ptr<SubTexture2D>& subtexture, const glm::vec4& color)
+{
+    glm::mat4 transform = glm::translate(glm::mat4(1.0f), { position.x, position.y, 0.0f })
+        * glm::scale(glm::mat4(1.0f), { size.x, size.y, 1.0f });
+
+    DrawQuad(transform, subtexture->GetTexture(), subtexture->GetTexCoords(), color);
+}

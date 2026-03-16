@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include "Renderer/Texture2D.h"
 
 enum class PowerUpType {
     ExtraLife,   
@@ -17,6 +18,8 @@ private:
 
     PowerUpType m_Type;
     bool m_IsDestroyed = false;
+
+	std::shared_ptr<Texture2D> m_Texture;
 
 public:
     PowerUp(glm::vec2 position, glm::vec2 size, PowerUpType type)
@@ -48,4 +51,7 @@ public:
     void Move(float dt) {
         m_Position += m_Velocity * dt;
     }
+
+	void SetTexture(const std::shared_ptr<Texture2D>& texture) { m_Texture = texture; }
+	const std::shared_ptr<Texture2D>& GetTexture() const { return m_Texture; }
 };

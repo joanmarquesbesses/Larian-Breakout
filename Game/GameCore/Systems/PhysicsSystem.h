@@ -82,31 +82,33 @@ public:
 
             // Bricks
             for (auto& brick : session.GetCurrentLevel().GetBricks()) {
-                if (!brick.IsDestroyed()) {
 
-                    auto hitNormal = GetCollisionNormal(ball.GetPosition(), ballSize, brick.GetPosition(), brick.GetSize(), penX, penY);
+                if (brick.IsDestroyed() || brick.IsDying()) {
+                    continue;
+                }
 
-                    if (hitNormal.has_value()) {
-                        glm::vec2 normal = hitNormal.value();
+                auto hitNormal = GetCollisionNormal(ball.GetPosition(), ballSize, brick.GetPosition(), brick.GetSize(), penX, penY);
 
-                        // Peneration resolution
-                        // Move ball out using the normal of the colision multiply by penetration cuantity
-                        ball.SetPosition({ ball.GetPosition().x + (normal.x * penX),
-                            ball.GetPosition().y + (normal.y * penY) });
+                if (hitNormal.has_value()) {
+                    glm::vec2 normal = hitNormal.value();
 
-                        // Bounce
-                        if (normal.x != 0.0f) {
-                            ball.Launch({ -ball.GetVelocity().x, ball.GetVelocity().y });
-                        }
-                        else {
-                            ball.Launch({ ball.GetVelocity().x, -ball.GetVelocity().y });
-                        }
+                    // Peneration resolution
+                    // Move ball out using the normal of the colision multiply by penetration cuantity
+                    ball.SetPosition({ ball.GetPosition().x + (normal.x * penX),
+                        ball.GetPosition().y + (normal.y * penY) });
 
-                        // Add the hitted brick 
-                        report.hitBricks.push_back(&brick);
-
-                        break; // Collide only with one brick per frame
+                    // Bounce
+                    if (normal.x != 0.0f) {
+                        ball.Launch({ -ball.GetVelocity().x, ball.GetVelocity().y });
                     }
+                    else {
+                        ball.Launch({ ball.GetVelocity().x, -ball.GetVelocity().y });
+                    }
+
+                    // Add the hitted brick 
+                    report.hitBricks.push_back(&brick);
+
+                    break; // Collide only with one brick per frame
                 }
             }
 
@@ -166,20 +168,5 @@ private:
         }
 
         return std::nullopt;
-    }
-
-    void SpawnMultiball(GameSession& session) {
-        if (session.GetBalls().empty()) return;
-
-        Ball mainBall = session.GetBalls()[0];
-
-        Ball newBall1 = mainBall;
-        Ball newBall2 = mainBall;
-
-        newBall1.Launch({ -mainBall.GetVelocity().x, mainBall.GetVelocity().y });
-        newBall2.Launch({ mainBall.GetVelocity().x * 1.2f, mainBall.GetVelocity().y });
-
-        session.GetBalls().push_back(newBall1);
-        session.GetBalls().push_back(newBall2);
     }
 };

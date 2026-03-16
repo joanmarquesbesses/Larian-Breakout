@@ -56,7 +56,7 @@ public:
             if (m_RequestStateChange) m_RequestStateChange(GameStateType::Playing);
         }
         else if (index == 2) { // OPTIONS
-            // TODO: Obrir un submenú o estat d'opcions
+            if (m_RequestStateChange) m_RequestStateChange(GameStateType::Options);
         }
         else if (index == 3) { // QUIT
             Application::Get().Close();

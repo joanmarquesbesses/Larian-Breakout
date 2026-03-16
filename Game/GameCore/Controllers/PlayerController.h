@@ -5,7 +5,7 @@
 
 enum class PlayerAction {
     MoveLeft, MoveRight, Fire, Pause,
-    Up, Down, Accept
+    Up, Down, Accept, Left, Right
 };
 
 class PlayerController {
@@ -14,6 +14,8 @@ private:
     inline static bool s_AcceptConsumed = false;
     inline static bool s_UpConsumed = false;
     inline static bool s_DownConsumed = false;
+    inline static bool s_LeftConsumed = false;  
+    inline static bool s_RightConsumed = false;
     inline static bool s_PauseConsumed = false;
 
 public:
@@ -21,6 +23,8 @@ public:
         if (action == PlayerAction::Accept) s_AcceptConsumed = true;
         if (action == PlayerAction::Up) s_UpConsumed = true;
         if (action == PlayerAction::Down) s_DownConsumed = true;
+        if (action == PlayerAction::Left) s_LeftConsumed = true;   
+        if (action == PlayerAction::Right) s_RightConsumed = true; 
         if (action == PlayerAction::Fire) s_FireConsumed = true;
         if (action == PlayerAction::Pause) s_PauseConsumed = true;
     }
@@ -55,6 +59,18 @@ public:
             bool isPressed = Input::IsKeyPressed(KeyCode::S) || Input::IsKeyPressed(KeyCode::Down);
             if (!isPressed) s_DownConsumed = false;
             return isPressed && !s_DownConsumed;
+        }
+
+        if (action == PlayerAction::Left) {
+            bool isPressed = Input::IsKeyPressed(KeyCode::A) || Input::IsKeyPressed(KeyCode::Left);
+            if (!isPressed) s_LeftConsumed = false;
+            return isPressed && !s_LeftConsumed;
+        }
+
+        if (action == PlayerAction::Right) {
+            bool isPressed = Input::IsKeyPressed(KeyCode::D) || Input::IsKeyPressed(KeyCode::Right);
+            if (!isPressed) s_RightConsumed = false;
+            return isPressed && !s_RightConsumed;
         }
 
         if (action == PlayerAction::Fire) {

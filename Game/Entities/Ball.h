@@ -8,6 +8,8 @@ private:
 
     float m_Radius;
     bool m_IsDestroyed = false;
+
+    std::shared_ptr<SubTexture2D> m_Texture;
 public:
 
     Ball() = default;
@@ -35,4 +37,7 @@ public:
 
     bool IsDestroyed() const { return m_IsDestroyed; }
     void Destroy() { m_IsDestroyed = true; }
+
+	const std::shared_ptr<SubTexture2D>& GetTexture() const { return m_Texture; }
+	void SetTexture(const std::shared_ptr<SubTexture2D>& texture) { m_Texture = texture; }
 };
