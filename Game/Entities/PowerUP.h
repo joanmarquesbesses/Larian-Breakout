@@ -20,6 +20,7 @@ private:
     bool m_IsDestroyed = false;
 
 	std::shared_ptr<Texture2D> m_Texture;
+    std::shared_ptr<SubTexture2D> m_SubTexture;
 
 public:
     PowerUp(glm::vec2 position, glm::vec2 size, PowerUpType type)
@@ -42,6 +43,7 @@ public:
 
     const glm::vec2& GetPosition() const { return m_Position; }
     const glm::vec2& GetSize() const { return m_Size; }
+	void SetSize(const glm::vec2& size) { m_Size = size; }
     const glm::vec4& GetColor() const { return m_Color; }
     PowerUpType GetType() const { return m_Type; }
     bool IsDestroyed() const { return m_IsDestroyed; }
@@ -52,6 +54,15 @@ public:
         m_Position += m_Velocity * dt;
     }
 
-	void SetTexture(const std::shared_ptr<Texture2D>& texture) { m_Texture = texture; }
+    void SetTexture(const std::shared_ptr<Texture2D>& texture) {
+        m_Texture = texture;
+        m_SubTexture = nullptr; 
+    }
 	const std::shared_ptr<Texture2D>& GetTexture() const { return m_Texture; }
+
+    void SetSubTexture(const std::shared_ptr<SubTexture2D>& subTexture) {
+        m_SubTexture = subTexture;
+        m_Texture = nullptr;
+    }
+    std::shared_ptr<SubTexture2D> GetSubTexture() const { return m_SubTexture; }
 };

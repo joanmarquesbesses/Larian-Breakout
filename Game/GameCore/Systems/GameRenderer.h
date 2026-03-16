@@ -4,10 +4,19 @@
 #include "GameCore/GameSession.h"
 #include "GameCore/Systems/ParticleSystem.h"
 
+struct FloatingText {
+    std::string Text;
+    glm::vec2 Position;
+    glm::vec4 Color;
+    float Timer;
+    float MaxTime;
+};  
+
 class GameRenderer {
 private:
     std::shared_ptr<Font> m_Font;
     ParticleSystem* m_ParticleSystem;
+	ParticleSystem* m_BgParticleSystem;
 
     float m_ShakeTimer = 0.0f;
     float m_ShakeIntensity = 0.05f;
@@ -19,22 +28,38 @@ private:
     float m_NebulaOffsetV = 0.0f;
 	float m_NebulaOffsetU = 0.0f;
 
+    std::vector<FloatingText> m_FloatingTexts;
+
 public:
-    GameRenderer(std::shared_ptr<Font> font, ParticleSystem* pSystem, 
+	GameRenderer(std::shared_ptr<Font> font, ParticleSystem* pSystem, ParticleSystem* bgPSystem,
         std::shared_ptr<Texture2D> heartTex, std::shared_ptr<Texture2D> nebulaTex)
-        : m_Font(font), m_ParticleSystem(pSystem),
+        : m_Font(font), m_ParticleSystem(pSystem), m_BgParticleSystem(bgPSystem),
         m_HeartTexture(heartTex), m_NebulaTexture(nebulaTex) {
     }
 
     void TriggerShake(float duration, float intensity) { m_ShakeTimer = duration; m_ShakeIntensity = intensity; }
-    void TriggerZoom(float duration) { m_ZoomTimer = duration; }
 
-    void UpdateEffects(float dt) {
-        if (m_ShakeTimer > 0.0f) m_ShakeTimer -= dt;
-        if (m_ZoomTimer > 0.0f) m_ZoomTimer -= dt;
+    void TriggerZoom(float duration) {
+        m_ZoomTimer = std::max(m_ZoomTimer, duration);
+    }
 
-        m_NebulaOffsetV += dt * 0.003f;
-		m_NebulaOffsetU += dt * 0.002f;
+    void UpdateEffects(float realDt, float gameDT) {
+        if (m_ShakeTimer > 0.0f) m_ShakeTimer -= realDt;
+        if (m_ZoomTimer > 0.0f) m_ZoomTimer -= realDt;
+
+        m_NebulaOffsetV += realDt * 0.006f;
+		m_NebulaOffsetU += realDt * 0.005f;
+
+        for (auto& ft : m_FloatingTexts) {
+            ft.Timer -= gameDT;
+            ft.Position.y += gameDT * 0.3f;
+        }
+
+        std::erase_if(m_FloatingTexts, [](const FloatingText& ft) { return ft.Timer <= 0.0f; });
+    }
+
+    void AddFloatingText(const std::string& text, glm::vec2 pos, glm::vec4 color) {
+        m_FloatingTexts.push_back({ text, pos, color, 1.0f, 1.0f });
     }
 
     void Render(GameSession& session, bool isPaused, TextMenu* pauseMenu) {
@@ -70,6 +95,8 @@ public:
         if (m_NebulaTexture) {
             Renderer::DrawQuad(bgTransform, m_NebulaTexture, nebulaUVs);
         }
+
+		m_BgParticleSystem->OnRender();
 
         auto paddleTex = session.GetPaddle().GetTexture();
         if (paddleTex) {
@@ -113,14 +140,27 @@ public:
 
         for (const auto& powerUp : session.GetPowerUps()) {
             if (!powerUp.IsDestroyed()) { 
-                auto pTex = powerUp.GetTexture();
-                if (pTex) {
-                    Renderer::DrawQuad(powerUp.GetPosition(), powerUp.GetSize(), pTex);
+                if (powerUp.GetSubTexture()) {
+                    Renderer::DrawQuad(powerUp.GetPosition(), powerUp.GetSize(), powerUp.GetSubTexture());
+                }
+                else if (powerUp.GetTexture()) {
+                    Renderer::DrawQuad(powerUp.GetPosition(), powerUp.GetSize(), powerUp.GetTexture());
                 }
                 else {
                     Renderer::DrawQuad(powerUp.GetPosition(), powerUp.GetSize(), powerUp.GetColor());
                 }
             }
+        }
+
+        for (const auto& ft : m_FloatingTexts) {
+            float alpha = ft.Timer / ft.MaxTime;
+            glm::vec4 color = ft.Color;
+            color.a = alpha;
+
+            float scale = 0.0008f;
+            float width = Renderer::GetTextWidth(ft.Text, scale, m_Font);
+
+            Renderer::DrawString(ft.Text, { ft.Position.x - (width / 2.0f), ft.Position.y }, scale, color, m_Font);
         }
 
         int lives = session.GetPlayer().GetLives();
