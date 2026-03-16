@@ -5,7 +5,7 @@
 
 enum class PlayerAction {
     MoveLeft, MoveRight, Fire, Pause,
-    Up, Down, Accept, Left, Right
+    Up, Down, Accept, Left, Right, SkipLevel
 };
 
 class PlayerController {
@@ -17,6 +17,7 @@ private:
     inline static bool s_LeftConsumed = false;  
     inline static bool s_RightConsumed = false;
     inline static bool s_PauseConsumed = false;
+	inline static bool s_SkipLevelConsumed = false;
 
 public:
     static void ConsumeInput(PlayerAction action) {
@@ -27,6 +28,7 @@ public:
         if (action == PlayerAction::Right) s_RightConsumed = true; 
         if (action == PlayerAction::Fire) s_FireConsumed = true;
         if (action == PlayerAction::Pause) s_PauseConsumed = true;
+        if (action == PlayerAction::SkipLevel) s_SkipLevelConsumed = true;
     }
 
     static std::optional<PlayerAction> GetPaddleAction() {
@@ -85,7 +87,11 @@ public:
             return isPressed && !s_PauseConsumed;
         }
 
-        if (action == PlayerAction::Pause) return Input::IsKeyPressed(KeyCode::Escape);
+        if (action == PlayerAction::SkipLevel) {
+            bool isPressed = Input::IsKeyPressed(KeyCode::F1);
+            if (!isPressed) s_SkipLevelConsumed = false;
+            return isPressed && !s_SkipLevelConsumed;
+		}
 
         return false;
     }

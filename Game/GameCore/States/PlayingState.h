@@ -134,6 +134,11 @@ public:
             return;
         }
 
+        if (PlayerController::ConsumeIfPressed(PlayerAction::SkipLevel) && m_PendingTransitionState == FlowState::Playing) {
+            m_PendingTransitionState = FlowState::LevelComplete;
+            if (m_NextLevel) AudioEngine::Play(m_NextLevel->GetPath());
+        }
+
         float realDt = ts.GetSeconds();
         float gameDt = realDt * m_TimeScale;
 
@@ -211,6 +216,8 @@ public:
                 if (m_BallBounce) AudioEngine::Play(m_BallBounce->GetPath());
             }
 
+            bool playBrickDestroyedSFX = false;
+
             for (size_t i = 0; i < bricksToProcess.size(); i++) {
                 Brick* brick = bricksToProcess[i];
 
@@ -258,12 +265,13 @@ public:
                             neighbor->SetHealth(0);
                             bricksToProcess.push_back(neighbor);
                         }
+                        playBrickDestroyedSFX = true;
                     }
                     else {
-                        if (m_BrickDestroyed) AudioEngine::Play(m_BrickDestroyed->GetPath());
+                        playBrickDestroyedSFX = true;
                     }
 
-                    if ((rand() % 100) < 20) {
+                    if (Random::Range(1,100) < 33) {
                         PowerUpType randomType = static_cast<PowerUpType>(rand() % 3);
                         PowerUp newPowerUp(brick->GetPosition(), { 0.1f, 0.1f }, randomType);
 
@@ -296,6 +304,10 @@ public:
                     m_BrickSystem->UpdateBrickTexture(*brick, m_Spritesheet);
                     m_GameRenderer->AddFloatingText("10", brick->GetPosition(), { 1.0f, 1.0f, 1.0f, 1.0f });
                 }
+            }
+
+            if (playBrickDestroyedSFX && m_BrickDestroyed) {
+                AudioEngine::Play(m_BrickDestroyed->GetPath());
             }
 
             for (PowerUp* powerUp : report.hitPowerUps) {

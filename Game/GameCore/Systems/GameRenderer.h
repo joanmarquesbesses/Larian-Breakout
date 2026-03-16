@@ -160,7 +160,7 @@ public:
                 }
 
                 if (brick.IsExplosive() && m_BombTexture) {
-					auto bombSize = brick.GetSize() * 0.5f;
+					auto bombSize = brick.GetSize() * 0.8f;
 					bombSize.x *= 0.8f; // Make it a bit narrower to fit better
                     Renderer::DrawQuad(brick.GetPosition(), bombSize, m_BombTexture);
                 }
