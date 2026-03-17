@@ -53,9 +53,10 @@ You can build and run the project using **Visual Studio 2022**. Choose the metho
 
 ### Option B: Cloning the Repository
 1. Clone the repository to your local machine.
-2. Navigate to the root folder and double-click the `GenerateProjects` script (e.g., `.bat` file). This will automatically generate the Visual Studio solution and project files.
-3. Open the newly generated `.sln` file in Visual Studio 2022.
-4. Select **Debug** or **Release** mode, build, and run.
+2. Download the `premake5.exe` for Windows from the official Premake website and place it directly in the root folder of the project.
+3. Double-click the `GenerateProjects.bat` script. This will use Premake to automatically generate the Visual Studio solution and project files.
+4. Open the newly generated `.sln` file in Visual Studio 2022.
+5. Select **Debug** or **Release** mode, build the solution (`Ctrl + Shift + B`), and run the game.
 
 ---
 
