@@ -58,3 +58,7 @@ You can build and run the project using **Visual Studio 2022**. Choose the metho
 ---
 
 ## 🎥 Gallery
+![MultiBall](https://github.com/user-attachments/assets/16773adc-faae-42a5-be2c-4ef168a4027d)
+
+![Explosive](https://github.com/user-attachments/assets/9cb05c7b-3f2f-4917-acc0-f85a7b754860)
+
