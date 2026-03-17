@@ -19,6 +19,8 @@ Instead of just building a functional clone, I focused on making the game feel r
 * **Accessible UI:** Fully implemented Pause Menu and Main Menu with full mouse support for easy navigation.
 * **Trajectory Aiming:** A retro-style aiming line to help players plan their initial launch.
 * **Dynamic Audio System:** Integrated sound effects with anti-clipping logic (one SFX per frame).
+* **Dynamic Paddle Physics:** The ball's exit angle dynamically changes based on the exact impact point on the paddle, giving players precise control over their shots and trajectory.
+* **Balanced Power-Ups:** Enhancements like the "Enlarge Paddle" have hard limits to prevent game-breaking scenarios, and all temporary buffs are cleanly reset upon losing a life or progressing to the next level.
 
 ## 🏗️ Architecture Highlights
 
