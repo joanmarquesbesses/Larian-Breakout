@@ -27,22 +27,32 @@ void Window::Init(const WindowProps& props) {
     m_Data.Width = props.Width;
     m_Data.Height = props.Height;
 
-    if (!s_GLFWInitialized) {
-        int success = glfwInit();
-        if (!success) { std::cout << "Could not initialize GLFW!\n"; return; }
-        s_GLFWInitialized = true;
-    }
+	std::cout << "[Engine] Creating window '" << props.Title << "' (" << props.Width << "x" << props.Height << ")\n";
+
+	if (!s_GLFWInitialized) {
+		int success = glfwInit();
+		if (!success) {
+			std::cout << "[Engine] ERROR: Could not initialize GLFW!\n";
+			return;
+		}
+		std::cout << "[Engine] GLFW initialized successfully.\n";
+		s_GLFWInitialized = true;
+	}
 
     m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
     glfwMakeContextCurrent(m_Window);
 
-    int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-    if (!status) { std::cout << "Failed to initialize Glad!\n"; return; }
+	int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+	if (!status) {
+		std::cout << "[Engine] ERROR: Failed to initialize Glad!\n";
+		return;
+	}
+	std::cout << "[Engine] Glad initialized successfully. OpenGL Context loaded.\n";
 
     glfwSetWindowUserPointer(m_Window, &m_Data);
     SetVSync(true);
 
-	//Set GLFW callbacks
+	// --- GLFW Event Callbacks ---
 	glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height) {
 		WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 		data.Width = width;
@@ -123,6 +133,7 @@ void Window::Init(const WindowProps& props) {
 }
 
 void Window::Shutdown() {
+	std::cout << "[Engine] Destroying Window and OpenGL context.\n";
     glfwDestroyWindow(m_Window);
 }
 

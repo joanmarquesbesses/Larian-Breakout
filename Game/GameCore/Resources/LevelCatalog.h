@@ -4,11 +4,11 @@
 
 class LevelCatalog {
 public:
-    // 3D vector. Levels vector that constains each level that is a vector of strings
-    // 'inline static' alows to define in the header
+    // 3D vector. Levels vector that constains each level (which is a vector of strings)
+    // 'inline static' allows definition directly in the header file
     inline static const std::vector<std::vector<std::string>> Levels = {
 
-        // LEVEL 1
+        // LEVEL 1: The Warm-up
         {
             "               ",
             "               ",
@@ -21,7 +21,7 @@ public:
             "               "
         },
 
-        // LEVEL 2
+        // LEVEL 2: Space Invader
         {
             "    1     1    ",
             "     1   1     ",
@@ -34,7 +34,7 @@ public:
             "               "
         },
 
-        // LEVEL 3
+        // LEVEL 3: The Twin Fortresses
         {
             "X             X",
             "X33333X X33333X",
@@ -47,7 +47,7 @@ public:
             "               "
         },
 
-        // LEVEL 4
+        // LEVEL 4: The Funnel
         {
             "XXXXXXXXXXXXXXX",
             "X1111111111111X",
@@ -60,6 +60,7 @@ public:
             "     X   X     "
         },
 
+        // LEVEL 5: The Explosive Pyramid
         {
             "               ",
             "               ",

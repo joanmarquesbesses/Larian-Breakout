@@ -4,6 +4,7 @@
 #include "Renderer/OrthographicCamera.h"
 #include "Renderer/Renderer.h"
 #include "Assets/ResourceManager.h"
+#include "Utils/Random.h"
 
 #include "../UI/TextMenu.h"
 #include "../Services/ScoreSerializer.h"
@@ -33,6 +34,8 @@ public:
     MainMenuState(GameSession* session) : m_Session(session), m_Camera(-1.6f, 1.6f, -0.9f, 0.9f) {}
 
     void OnEnter() override {
+        std::cout << "[MainMenuState] Entering Main Menu\n";
+
         m_Font = ResourceManager::Get<Font>("Assets/Font/BitFont.ttf");
 		m_Nebula = ResourceManager::Get<Texture2D>("Assets/Textures/nebula.png");
         AudioEngine::PlayMusic("Assets/Music/TitleScreen.mp3", true);
@@ -51,11 +54,11 @@ public:
         m_MainMenu = std::make_unique<TextMenu>(options, yPositions, m_Font);
         m_MainMenu->SetSelectedIndex(m_CanContinue ? 0 : 1);
 
+        // Pre-warm background particles
         for (int i = 0; i < 40; i++) {
             ParticleProps initialStar = ParticlePresets::GetStar();
-            float randomY = ((rand() % 200) / 100.0f) - 1.0f;
-            initialStar.Position.y = randomY;
-            initialStar.LifeTime = 10.0f + ((rand() % 1500) / 100.0f);
+            initialStar.Position.y = Random::Range(-1.0f, 1.0f);
+            initialStar.LifeTime = Random::Range(10.0f, 25.0f);
             m_BgParticleSystem.Emit(initialStar);
         }
     }
@@ -66,16 +69,17 @@ public:
         m_NebulaOffsetV += ts * 0.003f;
         m_NebulaOffsetU += ts * 0.002f;
 
-        if ((rand() % 100) < 1) {
+        if (Random::Range(0, 100) < 1) {
             m_BgParticleSystem.Emit(ParticlePresets::GetStar());
         }
         m_BgParticleSystem.OnUpdate(ts);
 
+        // Input debouncing timeout
         if (m_Time < 0.5f) return;
 
         auto result = m_MainMenu->OnUpdate(m_Camera, ts.GetSeconds(), !m_CanContinue);
 
-        // If true, user have execute a menu option
+        // If result has a value, the user executed a menu option
         if (result.has_value()) {
             int selectedIndex = result.value();
             ExecuteAction(selectedIndex);
@@ -99,6 +103,7 @@ public:
             }
         }
         else if (index == 2) { // QUIT
+            std::cout << "[MainMenuState] Action: Quit Game\n";
             Application::Get().Close();
         }
     }
@@ -127,7 +132,7 @@ public:
         std::string scoreText = "HIGH SCORE: " + std::to_string(m_Session->GetPlayer().GetHighScore());
         Renderer::DrawString(scoreText, { -1.55f, 0.8f }, 0.001f, { 1.0f, 1.0f, 1.0f, 1.0f }, m_Font);
 
-        // Menu render  
+        // Render UI Menu
         if (m_MainMenu) {
             m_MainMenu->OnRender(!m_CanContinue);
         }

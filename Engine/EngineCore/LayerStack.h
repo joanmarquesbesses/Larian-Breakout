@@ -3,6 +3,7 @@
 #include "Layer.h"
 #include <vector>
 
+// Manages the collection of active layers in the application.
 class LayerStack
 {
 public:

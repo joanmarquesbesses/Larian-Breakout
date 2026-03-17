@@ -7,6 +7,7 @@
 #include "Renderer/Renderer.h"
 #include "Utils/Random.h"
 
+// Configuration struct to define how a new particle should be emitted
 struct ParticleProps {
     glm::vec2 Position;
     glm::vec2 Velocity, VelocityVariation;
@@ -15,6 +16,7 @@ struct ParticleProps {
     float LifeTime = 1.0f;
 };
 
+// Manages a pre-allocated pool of particles to avoid runtime memory allocation (Object Pooling).
 class ParticleSystem {
 private:
     struct Particle {
@@ -48,7 +50,7 @@ public:
 
             particle.LifeRemaining -= ts;
             particle.Position += particle.Velocity * ts;
-            // particle.Rotation += 2.0f * ts; // Si vols que girin
+            // Optional: particle.Rotation += 2.0f * ts; if rotation is needed
         }
     }
 
@@ -56,13 +58,15 @@ public:
         for (auto& particle : m_ParticlePool) {
             if (!particle.Active) continue;
 
-            // Fade out de vida (de 1.0 a 0.0)
+            // Normalize life between 0.0 and 1.0 for interpolation
             float life = particle.LifeRemaining / particle.LifeTime;
 
+            // Interpolate color and size over the particle's lifetime
             glm::vec4 color = glm::lerp(particle.ColorEnd, particle.ColorBegin, life);
             float size = glm::lerp(particle.SizeEnd, particle.SizeBegin, life);
 
-            // Si el teu motor té DrawRotatedQuad, fes-lo servir. Si no, amb DrawQuad per a quadradets petits ja fa l'efecte!
+            // DrawQuad works well enough for small square particles.
+            // If the engine supports DrawRotatedQuad, rotation can be applied here.
             Renderer::DrawQuad(particle.Position, { size, size }, color);
         }
     }
@@ -72,6 +76,7 @@ public:
         particle.Active = true;
         particle.Position = particleProps.Position;
 
+        // Apply velocity with random variance
         particle.Velocity = particleProps.Velocity;
         particle.Velocity.x += particleProps.VelocityVariation.x * (Random::Range(-0.5f, 0.5f));
         particle.Velocity.y += particleProps.VelocityVariation.y * (Random::Range(-0.5f, 0.5f));
@@ -82,9 +87,16 @@ public:
         particle.LifeTime = particleProps.LifeTime;
         particle.LifeRemaining = particleProps.LifeTime;
 
+        // Apply size with random variance
         particle.SizeBegin = particleProps.SizeBegin + particleProps.SizeVariation * (Random::Range(-0.5f, 0.5f));
         particle.SizeEnd = particleProps.SizeEnd;
 
-        m_PoolIndex = --m_PoolIndex % m_ParticlePool.size();
+        // Safely decrement the pool index, wrapping around to the end if it hits 0
+        if (m_PoolIndex == 0) {
+            m_PoolIndex = m_ParticlePool.size() - 1;
+        }
+        else {
+            m_PoolIndex--;
+        }
     }
 };

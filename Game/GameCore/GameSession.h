@@ -17,6 +17,8 @@ enum class GameState {
     Victory
 };
 
+// Acts as the single source of truth for the current state of the game world.
+// Contains all pure data entities and the camera.
 class GameSession {
 private:
     OrthographicCamera m_Camera;
@@ -30,8 +32,7 @@ private:
     int m_CurrentLevelIndex = 0;
 
     bool m_IsBallInPlay = false;
-
-    bool m_IsGameActive = false;
+    bool m_IsGameActive = false; // True if a run is currently ongoing (allows "Continue" from Main Menu)
 
 public:
     GameSession()

@@ -4,6 +4,7 @@
 #include "Renderer/OrthographicCamera.h"
 #include "Renderer/Renderer.h"
 #include "Assets/ResourceManager.h"
+#include "Utils/Random.h"
 
 #include "GameCore/GameSession.h"
 #include "../Controllers/PlayerController.h"
@@ -40,20 +41,27 @@ public:
     GameOverState(GameSession* session) : m_Session(session), m_Camera(-1.6f, 1.6f, -0.9f, 0.9f) {}
 
     void OnEnter() override {
+        std::cout << "[GameOverState] Entering Game Over screen. Final Score: " << m_Session->GetPlayer().GetScore() << "\n";
+
         m_TextFont = ResourceManager::Get<Font>("Assets/Font/BitFont.ttf");
         m_Nebula = ResourceManager::Get<Texture2D>("Assets/Textures/nebula.png");
         m_NewHighScore = ScoreSerializer::SaveHighScore(m_Session->GetPlayer().GetScore());
+
+        if (m_NewHighScore) {
+            std::cout << "[GameOverState] New High Score achieved!\n";
+        }
+
         AudioEngine::StopMusic();
         AudioEngine::PlayMusic("Assets/Music/GameOver.mp3", true);
 
         m_Time = 0.0f;
         m_IsTransitioning = false;
 
+        // Pre-warm background particles
         for (int i = 0; i < 40; i++) {
             ParticleProps initialStar = ParticlePresets::GetStar();
-            float randomY = ((rand() % 200) / 100.0f) - 1.0f;
-            initialStar.Position.y = randomY;
-            initialStar.LifeTime = 10.0f + ((rand() % 1500) / 100.0f);
+            initialStar.Position.y = Random::Range(-1.0f, 1.0f);
+            initialStar.LifeTime = Random::Range(10.0f, 25.0f);
             m_BgParticleSystem.Emit(initialStar);
         }
     }
@@ -65,7 +73,7 @@ public:
         m_NebulaOffsetV += dt * 0.003f;
         m_NebulaOffsetU += dt * 0.002f;
 
-        if ((rand() % 100) < 1) {
+        if (Random::Range(0, 100) < 1) {
             m_BgParticleSystem.Emit(ParticlePresets::GetStar());
         }
         m_BgParticleSystem.OnUpdate(dt);
@@ -96,6 +104,7 @@ public:
                 { 0.0f + m_NebulaOffsetU, 1.0f + m_NebulaOffsetV }
             };
 
+            // Tint the nebula slightly red to fit the Game Over mood
             Renderer::DrawQuad(bgTransform, m_Nebula, nebulaUVs, { 0.9f, 0.5f, 0.5f, 1.0f });
         }
 

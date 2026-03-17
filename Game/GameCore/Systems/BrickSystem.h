@@ -1,11 +1,17 @@
 #pragma once
 #include "GameCore/GameSession.h"
 
+// System responsible for managing brick lifecycles, textures, animations, and explosion radii
 class BrickSystem {
 public:
-	// Called when a new level is loaded to setup brick textures and animations based on their health
+    // Called when a new level is loaded to setup brick textures and animations based on their health
     void SetupBricks(GameSession& session, const std::shared_ptr<Texture2D>& spritesheet) {
         for (auto& brick : session.GetCurrentLevel().GetBricks()) {
+
+            if (brick.GetMaxHealth() == -1) {
+                continue; // Skip setup for indestructible walls (handled in PlayingState)
+            }
+
             brick.SetMaxHealth(brick.GetHealth());
 
             UpdateBrickTexture(brick, spritesheet);
@@ -19,7 +25,7 @@ public:
         }
     }
 
-	// Called when a brick takes damage to update its texture based on remaining health
+    // Called when a brick takes damage to update its texture based on remaining health
     void UpdateBrickTexture(Brick& brick, const std::shared_ptr<Texture2D>& spritesheet) {
         if (!spritesheet) return;
 
@@ -34,19 +40,21 @@ public:
         brick.SetIdleTexture(idleTex);
     }
 
-	// Utility function to get bricks within explosion radius of an explosive brick
+    // Utility function to get all destructible bricks within the explosion radius of a specific brick
     std::vector<Brick*> GetBricksInExplosion(GameSession& session, Brick* explosiveBrick) {
         std::vector<Brick*> foundBricks;
 
         float eHalfW = explosiveBrick->GetSize().x / 2.0f;
         float eHalfH = explosiveBrick->GetSize().y / 2.0f;
 
+        // Expanded hitbox (1.5x) to create the explosion radius
         float eMinX = explosiveBrick->GetPosition().x - (eHalfW * 1.5f);
         float eMaxX = explosiveBrick->GetPosition().x + (eHalfW * 1.5f);
         float eMinY = explosiveBrick->GetPosition().y - (eHalfH * 1.5f);
         float eMaxY = explosiveBrick->GetPosition().y + (eHalfH * 1.5f);
 
         for (auto& brick : session.GetCurrentLevel().GetBricks()) {
+            // Skip self, already dead bricks, or indestructible walls
             if (&brick == explosiveBrick || brick.IsDestroyed() || brick.IsDying()) continue;
 
             float bHalfW = brick.GetSize().x / 2.0f;
@@ -67,6 +75,7 @@ public:
         return foundBricks;
     }
 
+    // Advances the animation frames for all dying bricks and flags them for deletion when finished
     void Update(GameSession& session, float dt) {
         for (auto& brick : session.GetCurrentLevel().GetBricks()) {
 
@@ -82,7 +91,7 @@ public:
                     }
                 }
                 else {
-                    brick.SetDestroyed();
+                    brick.SetDestroyed(); // Fallback if no animation exists
                 }
             }
         }

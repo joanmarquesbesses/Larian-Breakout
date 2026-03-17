@@ -2,7 +2,7 @@ workspace "LarianBreakout"
     architecture "x64"
     startproject "Breakout" 
 
-    configurations { "Debug", "Release", "Dist" }
+    configurations { "Debug", "Release" }
 
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"

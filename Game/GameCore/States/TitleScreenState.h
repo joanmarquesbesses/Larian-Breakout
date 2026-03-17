@@ -29,6 +29,7 @@ private:
 
     std::shared_ptr<AudioClip> m_ConfirmSFX;
 
+    // Background scrolling offset
     float m_NebulaOffsetV = 0.0f;
     float m_NebulaOffsetU = 0.0f;
     ParticleSystem m_BgParticleSystem;
@@ -42,11 +43,11 @@ public:
         m_NebulaTexture = ResourceManager::Get<Texture2D>("Assets/Textures/nebula.png");
         AudioEngine::PlayMusic("Assets/Music/TitleScreen.mp3", true);
 
+        // Pre-warm the background particle system with some initial stars
         for (int i = 0; i < 40; i++) {
             ParticleProps initialStar = ParticlePresets::GetStar();
-            float randomY = ((rand() % 200) / 100.0f) - 1.0f;
-            initialStar.Position.y = randomY;
-            initialStar.LifeTime = 10.0f + ((rand() % 1500) / 100.0f);
+            initialStar.Position.y = Random::Range(-1.0f, 1.0f);
+            initialStar.LifeTime = Random::Range(10.0f, 25.0f);
             m_BgParticleSystem.Emit(initialStar);
         }
 
@@ -58,14 +59,17 @@ public:
         float dt = ts.GetSeconds();
         m_Time += dt;
 
+        // Scroll background texture
         m_NebulaOffsetV += dt * 0.003f;
         m_NebulaOffsetU += dt * 0.002f;
 
-        if ((rand() % 100) < 1) {
+        // Randomly emit new background stars
+        if (Random::Range(0,100) < 1) {
             m_BgParticleSystem.Emit(ParticlePresets::GetStar());
         }
         m_BgParticleSystem.OnUpdate(dt);
 
+        // Wait 1.5 seconds before allowing input, then check for start action
         if (m_Time > 1.5f && !m_IsTransitioning && PlayerController::ConsumeIfPressed(PlayerAction::Fire)) {
             m_IsTransitioning = true;
             if (m_RequestStateChange) {
@@ -80,6 +84,7 @@ public:
         Renderer::Clear();
         Renderer::BeginScene(m_Camera.GetViewProjectionMatrix());
 
+        // Render scrolling background nebula
         if (m_NebulaTexture) {
             glm::mat4 bgTransform = glm::translate(glm::mat4(1.0f), { 0.0f, 0.0f, 0.0f })
                 * glm::scale(glm::mat4(1.0f), { 4.0f, 4.0f, 1.0f });
@@ -95,17 +100,20 @@ public:
 
         m_BgParticleSystem.OnRender();
 
+        // Title fade-in logic
         float titleAlpha = std::clamp(m_Time - 1.0f, 0.0f, 1.0f);
         if (titleAlpha > 0.0f) {
             float titleWidth = Renderer::GetTextWidth(m_TitleText, m_TitleScale, m_TextFont);
             Renderer::DrawString(m_TitleText, { 0.0f - (titleWidth / 2), 0.3f }, m_TitleScale, { 0.8f, 0.2f, 0.2f, titleAlpha }, m_TextFont);
         }
 
+        // Subtitle ("Press SPACE") fade-in and pulsing logic
         if (m_Time > 2.0f) {
             float subtitleWidth = Renderer::GetTextWidth(m_SubtitleText, m_SubtitleScale, m_TextFont);
 
             float fadeInAlpha = std::clamp((m_Time - 2.0f) / 2.0f, 0.0f, 1.0f);
 
+            // Sine wave for pulsing opacity between 0.3 and 1.0
             float blinkAlpha = (std::sin((m_Time - 2.0f) * 4.0f) + 1.0f) / 2.0f;
             blinkAlpha = std::clamp(blinkAlpha, 0.3f, 1.0f);
 

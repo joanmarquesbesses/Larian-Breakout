@@ -1,5 +1,6 @@
 #pragma once
 
+// Utility class to track delta time between frames.
 class Timestep
 {
 public:

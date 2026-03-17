@@ -2,8 +2,10 @@
 #include <fstream>
 #include <string>
 
+// A static service responsible for reading and writing the player's high score to the local disk.
 class ScoreSerializer {
 public:
+    // Reads the highscore.txt file and returns the saved score. Returns 0 if the file doesn't exist.
     static int LoadHighScore() {
         std::ifstream file("highscore.txt");
         int score = 0;
@@ -14,6 +16,8 @@ public:
         return score;
     }
 
+    // Compares the current score with the saved high score. 
+    // If the current score is strictly higher, it overwrites the file and returns true.
     static bool SaveHighScore(int currentScore) {
         int oldScore = LoadHighScore();
 
@@ -23,9 +27,9 @@ public:
                 file << currentScore;
                 file.close();
             }
-            return true;
+            return true; // New High Score achieved!
         }
 
-        return false;
+        return false; // Score wasn't high enough to save
     }
 };

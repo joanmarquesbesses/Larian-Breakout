@@ -11,11 +11,12 @@ struct WindowProps {
     uint32_t Width;
     uint32_t Height;
 
-    WindowProps(const std::string& title = "Larian Arkanoid", uint32_t width = 1280, uint32_t height = 720)
+    WindowProps(const std::string& title = "Larian Breakout - Technical Showcase", uint32_t width = 1280, uint32_t height = 720)
         : Title(title), Width(width), Height(height) {
     }
 };
 
+// OS-specific Window interface. Manages the GLFW window and OpenGL context.
 class Window {
 public:
     using EventCallbackFn = std::function<void(Event&)>;

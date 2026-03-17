@@ -3,6 +3,7 @@
 #include "Input/Input.h"
 #include <optional>
 
+// Maps specific keys to logical game actions to decouple input devices from gameplay logic.
 enum class PlayerAction {
     MoveLeft, MoveRight, Fire, Pause,
     Up, Down, Accept, Left, Right, SkipLevel
@@ -10,6 +11,7 @@ enum class PlayerAction {
 
 class PlayerController {
 private:
+    // State flags for input debouncing (ensures single trigger per key press)
     inline static bool s_FireConsumed = false;
     inline static bool s_AcceptConsumed = false;
     inline static bool s_UpConsumed = false;
@@ -20,6 +22,7 @@ private:
 	inline static bool s_SkipLevelConsumed = false;
 
 public:
+    // Marks an action as consumed so it won't trigger again until the key is released
     static void ConsumeInput(PlayerAction action) {
         if (action == PlayerAction::Accept) s_AcceptConsumed = true;
         if (action == PlayerAction::Up) s_UpConsumed = true;
@@ -31,6 +34,7 @@ public:
         if (action == PlayerAction::SkipLevel) s_SkipLevelConsumed = true;
     }
 
+    // Continuous input check for paddle movement
     static std::optional<PlayerAction> GetPaddleAction() {
         // Todo: Gamepad
 
@@ -44,6 +48,7 @@ public:
         return std::nullopt;
     }
 
+    // Checks if an action is currently pressed and hasn't been consumed yet
     static bool IsActionPressed(PlayerAction action) {
         if (action == PlayerAction::Accept) {
             bool isPressed = Input::IsKeyPressed(KeyCode::Enter);
@@ -96,6 +101,7 @@ public:
         return false;
     }
 
+    // Checks if the action is pressed, and if so, consumes it immediately (useful for UI navigation)
     static bool ConsumeIfPressed(PlayerAction action) {
         if (IsActionPressed(action)) {
             ConsumeInput(action);

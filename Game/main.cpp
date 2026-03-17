@@ -4,31 +4,34 @@
 class ArkanoidApp : public Application
 {
 public:
-    ArkanoidApp() : Application("Larian Arkanoid - Prova Tecnica")
+    ArkanoidApp() : Application("Larian Breakout - Technical Showcase")
     {
-        std::cout << "[ArkanoidApp] Joc inicialitzat correctament.\n";
+        std::cout << "[ArkanoidApp] Game initialized successfully.\n";
     }
 
     ~ArkanoidApp()
     {
-        std::cout << "[ArkanoidApp] Joc tancat.\n";
+        std::cout << "[ArkanoidApp] Game shut down cleanly.\n";
     }
 };
 
 int main() {
 
-    std::cout << "--- Iniciant Motor ---\n";
+    std::cout << "[Engine] --- Starting Engine ---\n";
 
-    // Instanciem l'aplicació
+    // Instantiate the application
     ArkanoidApp* app = new ArkanoidApp();
+
+    // Push the main game layer into the application
     app->PushLayer(new GameLayer());
 
-    // Executem el bucle infinit (aquí dins hi ha el Update i el Render)
+    // Execute the main game loop (Update and Render happen here)
     app->Run();
 
-    // Neteja de memòria un cop tanquem la finestra
+    // Memory cleanup once the window is closed
     delete app;
 
-    std::cout << "--- Sortida Neta ---\n";
+    std::cout << "[Engine] --- Clean Exit ---\n";
+
     return 0;
 }

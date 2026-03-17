@@ -8,10 +8,12 @@
 #include "Events/ApplicationEvent.h"
 #include "EngineCore/Timestep.h"
 
+// The core engine application class. Manages the main game loop, 
+// window events, and the layer stack.
 class Application
 {
 public:
-    Application(const std::string& name = "Larian Arkanoid");
+    Application(const std::string& name = "Larian Breakout - Technical Showcase");
     virtual ~Application();
 
     void Run();
@@ -37,7 +39,7 @@ private:
 
     LayerStack m_LayerStack;
 
-    // Control de temps
+    // Time management
     float m_LastFrameTime = 0.0f;
     float m_FrameTimeAccumulator = 0.0f;
     int m_FrameCount = 0;

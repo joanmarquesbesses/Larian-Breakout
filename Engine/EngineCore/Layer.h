@@ -4,6 +4,7 @@
 #include "Timestep.h"
 #include "Events/Event.h" 
 
+// Base class for an application layer. Layers can be attached/detached and receive updates/events.
 class Layer
 {
 public:

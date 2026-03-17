@@ -18,7 +18,7 @@ void ResourceManager::Clear()
     {
         clearFunc();
     }
-    std::cout << "ResourceManager: All resources had been cleared.\n";
+    std::cout << "[Engine] ResourceManager: All resources had been cleared.\n";
 }
 
 void ResourceManager::CleanUpUnused()

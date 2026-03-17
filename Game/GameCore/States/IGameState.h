@@ -1,32 +1,37 @@
 #pragma once
 #include "EngineCore/Timestep.h"
 
+// Defines the available macro-states of the game application
 enum class GameStateType {
     TitleScreen,
     MainMenu,
-    Options,
+    Options, // Kept for compatibility if ever decide to add it back
     Playing,
     GameOver
 };
 
+// Base interface for all game states. Follows the State Design Pattern.
 class IGameState {
 protected:
     // CALLBACK 1: STATE CHANGE
-    // Fade Out -> Delete Old State -> Create New State -> Fade In
+    // Behavior: Fade Out -> Delete Old State -> Create New State -> Fade In
+    // Use this to transition completely from one GameState to another.
     std::function<void(GameStateType)> m_RequestStateChange;        
 
     // CALLBACK 2: TRANSITION
-    // Fade Out -> Execute function (eg: load new blocks) -> Fade In
-    // Doesn't change state
+    // Behavior: Fade Out -> Execute custom lambda function -> Fade In
+    // Use this to mask background loading or level resets without changing the active state.
     std::function<void(std::function<void()>)> m_RequestTransition; 
 
 public:
     virtual ~IGameState() = default;
 
+    // Registers the callback provided by the orchestrator (GameLayer)
     void SetStateChangeCallback(const std::function<void(GameStateType)>& callback) {
         m_RequestStateChange = callback;
     }
 
+    // Registers the callback provided by the orchestrator (GameLayer)
     void SetTransitionCallback(const std::function<void(std::function<void()>)>& callback) {
         m_RequestTransition = callback;
     }

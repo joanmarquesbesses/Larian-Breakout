@@ -2,6 +2,8 @@
 
 #include "Event.h"
 
+// Application-level events (Window Resize, Close, Tick updates)
+
 class WindowResizeEvent : public Event
 {
 public:

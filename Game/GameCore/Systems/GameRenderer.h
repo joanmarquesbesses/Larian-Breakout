@@ -1,9 +1,12 @@
 #pragma once
 
 #include "Renderer/Renderer.h"
+#include "Utils/Random.h"
+
 #include "GameCore/GameSession.h"
 #include "GameCore/Systems/ParticleSystem.h"
 
+// Data structure for the floating text system (e.g., scoring points popup)
 struct FloatingText {
     std::string Text;
     glm::vec2 Position;
@@ -12,12 +15,15 @@ struct FloatingText {
     float MaxTime;
 };  
 
+// Responsible for rendering all visual elements of the game world.
+// Separates the rendering logic from the gameplay logic.
 class GameRenderer {
 private:
     std::shared_ptr<Font> m_Font;
     ParticleSystem* m_ParticleSystem;
 	ParticleSystem* m_BgParticleSystem;
 
+    // Camera Effects state
     float m_ShakeTimer = 0.0f;
     float m_ShakeIntensity = 0.05f;
     float m_ZoomTimer = 0.0f;
@@ -26,6 +32,7 @@ private:
     std::shared_ptr<Texture2D> m_NebulaTexture;
 	std::shared_ptr<Texture2D> m_BombTexture;
 
+    // Background scrolling values
     float m_NebulaOffsetV = 0.0f;
 	float m_NebulaOffsetU = 0.0f;
 
@@ -38,8 +45,10 @@ public:
         m_HeartTexture(heartTex), m_NebulaTexture(nebulaTex), m_BombTexture(bombText) {
     }
 
+    // Requests a screen shake effect for a specific duration
     void TriggerShake(float duration, float intensity) { m_ShakeTimer = duration; m_ShakeIntensity = intensity; }
 
+    // Requests a slight screen zoom (impact effect) for a specific duration
     void TriggerZoom(float duration) {
         m_ZoomTimer = std::max(m_ZoomTimer, duration);
     }
@@ -51,6 +60,7 @@ public:
         m_NebulaOffsetV += realDt * 0.006f;
 		m_NebulaOffsetU += realDt * 0.005f;
 
+        // Animate floating combat text upwards and fade out
         for (auto& ft : m_FloatingTexts) {
             ft.Timer -= gameDT;
             ft.Position.y += gameDT * 0.3f;
@@ -59,10 +69,12 @@ public:
         std::erase_if(m_FloatingTexts, [](const FloatingText& ft) { return ft.Timer <= 0.0f; });
     }
 
+    // Spawns a new floating text instance at a specific world position
     void AddFloatingText(const std::string& text, glm::vec2 pos, glm::vec4 color) {
         m_FloatingTexts.push_back({ text, pos, color, 1.0f, 1.0f });
     }
 
+    // Main render loop for the Play mode
     void Render(GameSession& session, bool isPaused, TextMenu* pauseMenu, float aimAngle) {
         Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
         Renderer::Clear();
@@ -79,26 +91,29 @@ public:
             { 0.0f + m_NebulaOffsetU, 1.0f + m_NebulaOffsetV } 
         };
 
+        // Apply Zoom effect
         if (m_ZoomTimer > 0.0f) {
             float zoomAmount = 1.0f + (m_ZoomTimer * 0.1f);
             viewProj = glm::scale(glm::mat4(1.0f), { zoomAmount, zoomAmount, 1.0f }) * viewProj;
         }
 
+        // Apply Camera Shake effect
         if (m_ShakeTimer > 0.0f) {
-            // Rand value between -0.5 and 0.5 and multiplied by shakeintensity
-            float offsetX = ((rand() % 100) / 100.0f - 0.5f) * m_ShakeIntensity;
-            float offsetY = ((rand() % 100) / 100.0f - 0.5f) * m_ShakeIntensity;
+            float offsetX = Random::Range(-0.5f, 0.5f) * m_ShakeIntensity;
+            float offsetY = Random::Range(-0.5f, 0.5f) * m_ShakeIntensity;
             viewProj = glm::translate(glm::mat4(1.0f), { offsetX, offsetY, 0.0f }) * viewProj;
         }
 
         Renderer::BeginScene(viewProj);
 
+        // Render Background
         if (m_NebulaTexture) {
             Renderer::DrawQuad(bgTransform, m_NebulaTexture, nebulaUVs);
         }
 
 		m_BgParticleSystem->OnRender();
 
+        // Render Trajectory Aiming Line (if ball is waiting to be launched)
         if(aimAngle != -999.0f && !session.GetBalls().empty()) {
             std::string startText = "PRESS SPACE TO LAUNCH!";
             float textScale = 0.001f;
@@ -116,6 +131,7 @@ public:
             }
 		}
 
+        // Render Paddle
         auto paddleTex = session.GetPaddle().GetTexture();
         if (paddleTex) {
             Renderer::DrawQuad(session.GetPaddle().GetPosition(), session.GetPaddle().GetSize(), paddleTex);
@@ -124,6 +140,7 @@ public:
             Renderer::DrawQuad(session.GetPaddle().GetPosition(), session.GetPaddle().GetSize(), { 0.2f, 0.3f, 0.8f, 1.0f });
         }
 
+        // Render Balls
         for (auto& ball : session.GetBalls()) {
             auto bTex = ball.GetTexture();
             if (bTex) {
@@ -134,6 +151,7 @@ public:
             }
         }
 
+        // Render Bricks
         for (const auto& brick : session.GetCurrentLevel().GetBricks()) {
             if (brick.IsDying()) {
                 auto anim = brick.GetDestroyAnim();
@@ -161,12 +179,13 @@ public:
 
                 if (brick.IsExplosive() && m_BombTexture) {
 					auto bombSize = brick.GetSize() * 0.8f;
-					bombSize.x *= 0.8f; // Make it a bit narrower to fit better
+					bombSize.x *= 0.8f; // Make it a bit narrower to fit better inside the block
                     Renderer::DrawQuad(brick.GetPosition(), bombSize, m_BombTexture);
                 }
             }
         }
 
+        // Render PowerUps
         for (const auto& powerUp : session.GetPowerUps()) {
             if (!powerUp.IsDestroyed()) { 
                 if (powerUp.GetSubTexture()) {
@@ -181,6 +200,7 @@ public:
             }
         }
 
+        // Render Floating Combat Text
         for (const auto& ft : m_FloatingTexts) {
             float alpha = ft.Timer / ft.MaxTime;
             glm::vec4 color = ft.Color;
@@ -192,6 +212,7 @@ public:
             Renderer::DrawString(ft.Text, { ft.Position.x - (width / 2.0f), ft.Position.y }, scale, color, m_Font);
         }
 
+        // Render Player UI (Lives & Score)
         int lives = session.GetPlayer().GetLives();
 
         for (int i = 0; i < lives; i++) {
@@ -208,6 +229,7 @@ public:
 
         m_ParticleSystem->OnRender();
 
+        // Render Pause Overlay
         if (isPaused) {
             // Transparent Dark Background
             Renderer::DrawQuad({ 0.0f, 0.0f }, { 4.0f, 4.0f }, { 0.0f, 0.0f, 0.0f, 0.7f });

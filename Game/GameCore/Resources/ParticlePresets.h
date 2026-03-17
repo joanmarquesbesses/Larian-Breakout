@@ -4,7 +4,7 @@
 
 namespace ParticlePresets {
 
-    // Brick explosion: burts of particles when gets destroyed.
+    // Brick explosion: bursts of particles when a brick gets destroyed.
     inline ParticleProps GetBrickExplosion(const glm::vec2& position, const glm::vec4& color) {
         ParticleProps props;
         props.Position = position;
@@ -19,7 +19,7 @@ namespace ParticlePresets {
         return props;
     }
 
-	// Power-Up trail: a small trail of particles following the power-up as it falls.
+    // Power-Up trail: a small trail of particles following the power-up as it falls.
     inline ParticleProps GetPowerUpTrail(const glm::vec2& position, const glm::vec4& color) {
         ParticleProps props;
 
@@ -38,22 +38,22 @@ namespace ParticlePresets {
         return props;
     }
 
-	// Deadzone hit: burst of particles shoots upwards as if it bounced off the bottom.
+    // Deadzone hit: burst of particles shooting upwards as if bouncing off the bottom bounds.
     inline ParticleProps GetBallDeath(const glm::vec2& position) {
         ParticleProps props;
         props.Position = position;
-        props.Velocity = { 0.0f, 1.0f }; // Surten disparades cap amunt (rebotant del fons)
+        props.Velocity = { 0.0f, 1.0f }; // Shoot upwards (bouncing from bottom)
         props.VelocityVariation = { 2.0f, 0.5f };
         props.SizeBegin = 0.05f;
         props.SizeEnd = 0.0f;
         props.SizeVariation = 0.02f;
-        props.ColorBegin = { 1.0f, 0.1f, 0.1f, 1.0f }; // Vermell perill
-        props.ColorEnd = { 1.0f, 0.5f, 0.0f, 0.0f }; // Es tornen taronges i desapareixen
+        props.ColorBegin = { 1.0f, 0.1f, 0.1f, 1.0f }; // Danger Red
+        props.ColorEnd = { 1.0f, 0.5f, 0.0f, 0.0f }; // Fade to orange and transparent
         props.LifeTime = 0.6f;
         return props;
     }
 
-	// Background stars: small particles that slowly fall down the screen to add depth to the background.
+    // Background stars: small particles that slowly fall down the screen to add depth to the background.
     inline ParticleProps GetStar() {
         ParticleProps props;
         float randomX = ((rand() % 500) / 100.0f) - 3.0f;

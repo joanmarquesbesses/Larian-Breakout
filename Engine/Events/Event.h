@@ -4,6 +4,8 @@
 #include <string>
 #include <sstream>
 
+// Base event system using a blocking dispatcher and bitwise category flags.
+
 enum class EventType
 {
 	None = 0,
@@ -29,6 +31,7 @@ enum EventCategory
 
 #define EVENT_CLASS_CATEGORY(category) virtual int GetCategoryFlags() const override { return category; }
 
+// Abstract base class for all engine events
 class Event
 {
 public:
@@ -51,6 +54,7 @@ private:
 	bool m_Handled = false;
 };
 
+// Dispatches events to their bound functions if the event type matches
 class EventDispatcher
 {
 	template<typename T>

@@ -42,11 +42,12 @@ private:
 
     float m_Time = 0.0f;
 
-    // Game feel
+    // Game feel variables
     float m_TimeScale = 1.0f;      
     float m_TransitionTimer = 0.0f;
     FlowState m_PendingTransitionState = FlowState::Playing;
 
+    // Trajectory aiming variables
     float m_AimAngle = 0.0f;
     float m_AimDir = 1.0f;
 
@@ -65,6 +66,8 @@ public:
     {}
 
     void OnEnter() override {
+        std::cout << "[PlayingState] Entering Play Mode\n";
+
         m_Font = ResourceManager::Get<Font>("Assets/Font/BitFont.ttf");
         m_Spritesheet = ResourceManager::Get<Texture2D>("Assets/Textures/spritesheet-breakout.png");
         auto heartTex = ResourceManager::Get<Texture2D>("Assets/Textures/heart.png");
@@ -89,7 +92,9 @@ public:
             m_Font
         );
 
+        // Check if we are starting a fresh game or continuing an active session
         if (!m_Session->IsGameActive()) {
+            std::cout << "[PlayingState] Starting fresh game session\n";
             m_Session->GetPlayer().ResetLives();
             m_Session->GetPlayer().ResetScore();
             m_Session->SetCurrentLevelIndex(0);
@@ -98,28 +103,29 @@ public:
             m_Session->SetGameActive(true); 
         }
         else {
+            std::cout << "[PlayingState] Resuming active game session\n";
             m_IsPaused = true;
             m_PauseMenu->SetSelectedIndex(0);
         }
 
+        // Pre-warm background particles
         for (int i = 0; i < 40; i++) {
             ParticleProps initialStar = ParticlePresets::GetStar();
-            float randomY = ((rand() % 200) / 100.0f) - 1.0f;
-            initialStar.Position.y = randomY;
-            initialStar.LifeTime = 10.0f + ((rand() % 1500) / 100.0f);
+            initialStar.Position.y = Random::Range(-1.0f, 1.0f);
+            initialStar.LifeTime = Random::Range(10.0f, 25.0f);
             m_BgParticleSystem.Emit(initialStar);
         }
     }
 
     void OnUpdate(Timestep ts) override {
 
-        // Activate/Desactivate Pause
+        // Activate/Desactivate Pause Menu
         if (PlayerController::ConsumeIfPressed(PlayerAction::Pause)) {
             m_IsPaused = !m_IsPaused;
             if (m_IsPaused) m_PauseMenu->SetSelectedIndex(0);
         }
 
-		// Pause menu update and input (Just if paused)
+        // Pause menu update and input handling (early return if paused)
         if (m_IsPaused) {
             auto result = m_PauseMenu->OnUpdate(m_Session->GetCamera(), ts.GetSeconds());
 
@@ -134,6 +140,7 @@ public:
             return;
         }
 
+        // Developer Cheat: Skip Level
         if (PlayerController::ConsumeIfPressed(PlayerAction::SkipLevel) && m_PendingTransitionState == FlowState::Playing) {
             m_PendingTransitionState = FlowState::LevelComplete;
             if (m_NextLevel) AudioEngine::Play(m_NextLevel->GetPath());
@@ -144,10 +151,10 @@ public:
 
         FlowState state = m_GameFlowSystem->Update(*m_Session);
 
-		// Update game flow and check for state changes (Level complete, ball lost, game over)
+        // Update game flow and check for state changes (Level Complete, Game Over)
         if ((state == FlowState::GameOver || state == FlowState::LevelComplete) && m_PendingTransitionState == FlowState::Playing) {
             m_PendingTransitionState = state;
-            m_TimeScale = 0.2f;       
+            m_TimeScale = 0.2f; // Trigger slow-motion effect       
 
             if (state == FlowState::GameOver) {
                 m_TransitionTimer = 2.0f;
@@ -175,7 +182,7 @@ public:
 
         bool stopInput = (state == FlowState::BallLost || m_PendingTransitionState == FlowState::GameOver);
 
-		// Player input and paddle movement (Just if playmode or ball lost, not on level complete or game over)
+        // Player input and paddle movement (Only active during playmode or ball lost state)
         if (!stopInput) {
             m_PaddleSystem->Update(*m_Session, gameDt);
 
@@ -189,6 +196,7 @@ public:
             pos.x = std::clamp(pos.x, minX, maxX);
             paddle.SetPosition(pos);
 
+            // Ball Aiming Logic (pre-launch)
             if (!m_Session->GetIsBallInPlay()) {
                 if (!m_Session->GetBalls().empty()) {
                     m_Session->GetBalls()[0].SetPosition({ m_Session->GetPaddle().GetPosition().x, m_Session->GetPaddle().GetPosition().y + 0.15f });
@@ -206,7 +214,7 @@ public:
             }
         }
 
-		// Physics and collisions (Just if playmode)
+        // Physics and collisions (Only calculated if ball is in play)
         if (m_Session->GetIsBallInPlay()) {
             PhysicsReport report = m_PhysicsSystem->Update(*m_Session, gameDt);
 
@@ -223,12 +231,13 @@ public:
 
                 if (brick->IsDying()) continue;
 
-				if (brick->GetMaxHealth() == -1) { // Indestructible brick, just skip it
+				if (brick->GetMaxHealth() == -1) { // Indestructible brick, skip processing
                     continue; 
                 }
 
                 brick->TakeDamage();
 
+                // Ball speed ramp-up logic upon hitting a brick
                 for (auto& ball : m_Session->GetBalls()) {
                     glm::vec2 currentVel = ball.GetVelocity();
                     float currentSpeed = glm::length(currentVel);
@@ -251,7 +260,7 @@ public:
                         }
                     }
 
-					// If this was the last brick, start the level complete transition and play the next level sfx
+                    // If this was the last brick, start the level complete transition and play victory SFX
                     if (isLastBrick && m_PendingTransitionState == FlowState::Playing) {
                         m_TimeScale = 0.2f; 
                         if (m_NextLevel) AudioEngine::Play(m_NextLevel->GetPath());
@@ -271,6 +280,7 @@ public:
                         playBrickDestroyedSFX = true;
                     }
 
+                    // 33% chance to drop a Power-Up
                     if (Random::Range(1,100) < 33) {
                         PowerUpType randomType = static_cast<PowerUpType>(rand() % 3);
                         PowerUp newPowerUp(brick->GetPosition(), { 0.1f, 0.1f }, randomType);
@@ -306,6 +316,7 @@ public:
                 }
             }
 
+            // Play the destruction SFX only once per frame to avoid audio clipping
             if (playBrickDestroyedSFX && m_BrickDestroyed) {
                 AudioEngine::Play(m_BrickDestroyed->GetPath());
             }
@@ -317,7 +328,7 @@ public:
                         m_Session->GetPlayer().AddLife();
                     }
                     else {
-                        m_Session->GetPlayer().AddScore(500);
+                        m_Session->GetPlayer().AddScore(500); // 500 bonus points if health is maxed
                     }
                     break;
                 case PowerUpType::Enlarge: {
@@ -334,6 +345,7 @@ public:
 				if(m_PowerUp) AudioEngine::Play(m_PowerUp->GetPath());
             }
 
+            // Power-Up trail particles
             for (const auto& powerUp : m_Session->GetPowerUps()) {
                 if (!powerUp.IsDestroyed()) {
                     m_ParticleSystem.Emit(ParticlePresets::GetPowerUpTrail(powerUp.GetPosition(), powerUp.GetColor()));
@@ -344,7 +356,7 @@ public:
             PerformGarbageCollection();
         }
 
-		// Handle level complete or game over transitions
+        // Handle cinematic transitions (Level Complete / Game Over)
         if (m_PendingTransitionState != FlowState::Playing) {
 
             if (m_TransitionTimer > 0.0f) {
@@ -359,6 +371,7 @@ public:
                 }
                 else if (m_PendingTransitionState == FlowState::LevelComplete) {
                     if (m_RequestTransition) {
+                        // Request global fade transition and pass the level loading action
                         m_RequestTransition([this]() {
                             int nextLevel = m_Session->GetCurrentLevelIndex() + 1;
                             if (nextLevel >= LevelSetup::GetLevelCount()) {
@@ -374,6 +387,7 @@ public:
             }
         }
 		
+        // Background particles update
         if (Random::Range(0.0f, 100.f) < 1) {
             m_BgParticleSystem.Emit(ParticlePresets::GetStar());
         }
@@ -385,18 +399,20 @@ public:
     }
 
     void OnRender() override {
+        // Hide aiming line if ball is currently in play
         float currentAim = m_Session->GetIsBallInPlay() ? -999.0f : m_AimAngle;
 		m_GameRenderer->Render(*m_Session, m_IsPaused, m_PauseMenu.get(), currentAim);
     }
 
 private:
-	// Load level data, setup bricks, paddle and ball for the current level
+    // Load level data, setup bricks, paddle and ball for the current level
     void PrepareLevel() {
+        std::cout << "[PlayingState] Preparing Level " << m_Session->GetCurrentLevelIndex() << "\n";
         LevelSetup::LoadLevelFromData(m_Session->GetCurrentLevel(), m_Session->GetCurrentLevelIndex());
 
         m_BrickSystem->SetupBricks(*m_Session, m_Spritesheet);
         for (auto& brick : m_Session->GetCurrentLevel().GetBricks()) {
-			if (brick.GetMaxHealth() == -1) { // Indestructible brick
+			if (brick.GetMaxHealth() == -1) { // Assign distinct texture to indestructible bricks
                 auto invincibleTex = SubTexture2D::CreateFromPixelCoords(m_Spritesheet, 32.0f, 288.0f, 32.0f, 16.0f);
                 brick.SetIdleTexture(invincibleTex);
             }
@@ -415,7 +431,7 @@ private:
         m_Session->SetIsBallInPlay(false);
     }
 
-	// Multiball power-up: Spawn 2 new balls for each existing ball, with slightly different velocities
+    // Multiball power-up: Spawn 2 new balls for each existing ball, with slightly different velocities
     void SpawnMultiball() {
         if (m_Session->GetBalls().empty()) return;
 
@@ -438,7 +454,7 @@ private:
         }
     }
 
-	// Remove destroyed entities
+    // Safely remove destroyed entities at the end of the frame
     void PerformGarbageCollection() {
         std::erase_if(m_Session->GetPowerUps(), [](const PowerUp& p) { return p.IsDestroyed(); });
 

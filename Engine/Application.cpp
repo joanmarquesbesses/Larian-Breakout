@@ -12,16 +12,20 @@ Application* Application::s_Instance = nullptr;
 Application::Application(const std::string& name)
 {
     if (s_Instance) {
-        std::cout << "ERROR: L'Application already exist!\n";
+        std::cout << "[Engine] ERROR: Application instance already exists!\n";
         return;
     }
     s_Instance = this;
 
-    // Creem la finestra i li diem on enviar els events
+    std::cout << "[Engine] Initializing Application instance...\n";
+
+    // Create the window and set its event callback
     m_Window = std::unique_ptr<Window>(Window::Create(WindowProps(name, 1280, 720)));
     m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 
-    // Aquí aniran els Inits dels teus sistemes (quan els portis)
+    std::cout << "[Engine] Initializing core subsystems (Random, Renderer, Audio)...\n";
+
+    // Initialize core subsystems
     Random::Init();
     Renderer::Init();
     AudioEngine::Init();
@@ -29,8 +33,10 @@ Application::Application(const std::string& name)
 
 Application::~Application()
 {
+    std::cout << "[Engine] Shutting down Application and destroying layers...\n";
     m_LayerStack.Clear();
 
+    std::cout << "[Engine] Shutting down core subsystems...\n";
     m_Window.reset();
     Renderer::Shutdown();
     AudioEngine::Shutdown();
@@ -51,6 +57,7 @@ void Application::PushOverlay(Layer* overlay)
 
 void Application::Close()
 {
+    std::cout << "[Engine] Application close requested.\n";
     m_Running = false;
 }
 
@@ -60,7 +67,7 @@ void Application::OnEvent(Event& e)
     dispatcher.Dispatch<WindowCloseEvent>(std::bind(&Application::OnWindowClose, this, std::placeholders::_1));
     dispatcher.Dispatch<WindowResizeEvent>(std::bind(&Application::OnWindowResize, this, std::placeholders::_1));
 
-    // Propaguem l'event per les capes (des de dalt cap a baix)
+    // Propagate events through the layer stack (from top overlay down to base layer)
     for (auto it = m_LayerStack.end(); it != m_LayerStack.begin();) {
         (*--it)->OnEvent(e);
         if (e.IsHandled())
@@ -88,12 +95,15 @@ bool Application::OnWindowResize(WindowResizeEvent& e)
 
 void Application::Run()
 {
+    std::cout << "[Engine] Entering main game loop...\n";
+
     while (m_Running) {
 
         float time = (float)glfwGetTime();
         Timestep timestep = time - m_LastFrameTime;
         m_LastFrameTime = time;
 
+        // FPS Calculation
         m_FrameTimeAccumulator += timestep.GetSeconds();
         m_FrameCount++;
         if (m_FrameTimeAccumulator >= 1.0f) {
@@ -102,6 +112,7 @@ void Application::Run()
             m_FrameCount = 0;
         }
 
+        // Only update and render if the window is not minimized
         if (!m_Minimized) {
             for (Layer* layer : m_LayerStack) {
                 layer->OnUpdate(timestep);

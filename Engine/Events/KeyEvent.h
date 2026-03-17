@@ -3,6 +3,8 @@
 #include "Event.h"
 #include "Input/KeyCodes.h"
 
+// Events triggered by keyboard input (Press, Release, Typed)
+
 class KeyEvent : public Event
 {
 public:
