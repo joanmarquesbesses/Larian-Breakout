@@ -1,4 +1,4 @@
-# Breakout: Technical Showcase 🧱🚀
+# Breakout 🧱🚀
 
 A robust, highly polished Breakout clone developed in C++ as a technical showcase. This project focuses on clean software architecture, engaging "Game Feel" (Game Juice), and a clear separation between data, logic and rendering.
 
@@ -21,6 +21,7 @@ Instead of just building a functional clone, I focused on making the game feel r
 * **Dynamic Audio System:** Integrated sound effects with anti-clipping logic (one SFX per frame).
 * **Dynamic Paddle Physics:** The ball's exit angle dynamically changes based on the exact impact point on the paddle, giving players precise control over their shots and trajectory.
 * **Balanced Power-Ups:** Enhancements like the "Enlarge Paddle" have hard limits to prevent game-breaking scenarios, and all temporary buffs are cleanly reset upon losing a life or progressing to the next level.
+* **Adaptive Difficulty:** The ball's velocity increases slightly with every brick destroyed, rewarding precision while naturally scaling the challenge as the level progresses.
 
 ## 🏗️ Architecture Highlights
 
