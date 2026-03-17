@@ -58,6 +58,18 @@ You can build and run the project using **Visual Studio 2022**. Choose the metho
 4. Open the newly generated `.sln` file in Visual Studio 2022.
 5. Select **Debug** or **Release** mode, build the solution (`Ctrl + Shift + B`), and run the game.
 
+## 🛠️ Credits & Third-Party Libraries
+
+This project was built using a custom engine architecture adapted from my personal engine, **Runic2D** ([link al teu repo si el tens, o simplement el nom]), which was originally developed following the foundational concepts of the **Hazel** engine series by **The Cherno**. The architecture has been significantly modified and tailored specifically for this Breakout implementation.
+
+### Libraries Used:
+* **GLFW**: Window management and input handling.
+* **GLAD**: OpenGL loader.
+* **GLM**: Mathematics library for graphics.
+* **miniaudio**: Audio playback engine.
+* **stb_image**: Image loading utilities.
+* **stb_truetype**: Font rendering and glyph processing.
+
 ---
 
 ## 🎥 Gallery
